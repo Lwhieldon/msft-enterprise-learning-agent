@@ -75,6 +75,10 @@ docs/_build/
 .pybuilder/
 target/
 
+# Claude Stuff
+.claude/
+CLAUDE.md
+
 # Jupyter Notebook
 .ipynb_checkpoints
 

@@ -40,8 +40,7 @@ Everything in this project is synthetic. Helix Dynamics is fictional. Employees,
 - **Battle:** Reasoning Agents Live Streaming Battle (Agents League Post Build, Battle #2)
 - **Date and time:** June 10, 2026, 12:00 PM EST (9:00 AM PT)
 - **Platform:** Microsoft Reactor YouTube channel via Streamyard
-- **Hosts:** Lee Stott and Carlotta Castelluccio (Microsoft)
-- **Competitors:** Princeps, Lee Whieldon, plus one TBC
+
 
 ## License
 
