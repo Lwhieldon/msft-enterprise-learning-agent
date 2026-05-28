@@ -6,6 +6,11 @@ openai>=1.40.0
 # Entra ID auth via DefaultAzureCredential (picks up az login)
 azure-identity>=1.15.0
 
+# Azure AI Search client for Foundry IQ retrieval grounding
+# (used by Forensic Analyst and Compliance Officer to pull policy and
+# framework context from the compliance-content-index)
+azure-search-documents>=11.5.0
+
 # Load .env files at module load so CLI smoke tests pick up Azure config
 python-dotenv>=1.0.0
 

@@ -6,11 +6,19 @@ Analyst is the loudest reasoning voice on the investigator party: she reads
 the technical evidence, cites framework controls, and pushes back when other
 party members or the player jump to conclusions.
 
-For the MVP, this wrapper passes the scenario context (evidence seeds,
-violated controls, involved systems, premise) into the user message rather
-than retrieving from Foundry IQ. Live Azure AI Search retrieval can be added
-later as a tool. The scenario already contains enough grounded synthetic
-content for the analyst to cite specific identifiers verbatim.
+Grounding:
+    The wrapper passes the scenario context (evidence seeds, violated
+    controls, involved systems, premise) into the user message. It also
+    retrieves additional policy and framework passages live from the
+    Foundry IQ Azure AI Search index (``compliance-content-index``) and
+    injects them as a separate section in the user message. This lets the
+    analyst cite real source documents by name when relevant.
+
+    Retrieval is on by default but degrades gracefully: if Azure Search is
+    unavailable or auth fails, the wrapper prints a notice and continues
+    using scenario-only context. The scenario JSON contains enough grounded
+    synthetic content for the analyst to function; retrieval is
+    enhancement, not requirement.
 
 Architecture:
     The Forensic Analyst is invoked by the Game Master (or directly by the
@@ -21,12 +29,13 @@ Architecture:
 Public API:
     consult_forensic_analyst(scenario, player_message, **opts) -> dict
         One turn of analyst consultation. Returns her analysis plus timing
-        metadata.
+        metadata and retrieval count.
 
 Exceptions:
     ForensicAnalystError
         Raised for any failure (env not configured, API failure, content
-        filter exhausted, empty response).
+        filter exhausted, empty response). NOT raised for Azure Search
+        failures — those degrade silently.
 
 CLI:
     Running this module as a script loads the default Helix Dynamics scenario
@@ -52,6 +61,11 @@ from src.agents._azure_client import (
     build_azure_client,
     load_prompt,
     resolve_deployment,
+)
+from src.agents._search_client import (
+    SearchClientError,
+    format_retrieved_context,
+    retrieve_context,
 )
 
 # ---------------------------------------------------------------------------
@@ -142,14 +156,28 @@ def _format_suspect_summary(suspects: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-def _build_user_message(scenario: dict[str, Any], player_message: str) -> str:
+def _build_user_message(
+    scenario: dict[str, Any],
+    player_message: str,
+    retrieved_context: str = "",
+) -> str:
     """Compose the user-side message giving the analyst her case context.
 
     The first turn includes the full scenario briefing. Follow-up turns
     in a multi-turn conversation will rely on conversation_history for
     continuity; the briefing is repeated only on turn one.
+
+    Args:
+        scenario: A merged scenario dict.
+        player_message: The investigator's question or instruction.
+        retrieved_context: Optional pre-formatted text block of passages
+            retrieved live from Foundry IQ. When non-empty, injected as a
+            new section between the scenario briefing and the player's
+            question. When empty (the default), no retrieval section is
+            included — preserves backward compatibility for callers that
+            do not use Foundry IQ.
     """
-    return (
+    briefing = (
         "Case briefing (provided once at the start of the consultation):\n\n"
         f"## Case: {scenario.get('scenario_name', '?')} "
         f"({scenario.get('scenario_id', '?')})\n\n"
@@ -161,9 +189,66 @@ def _build_user_message(scenario: dict[str, Any], player_message: str) -> str:
         f"{_format_violated_controls(scenario.get('violated_controls', []))}\n\n"
         f"### Involved systems\n"
         f"{', '.join(scenario.get('involved_systems', []))}\n\n"
-        "---\n\n"
-        f"Investigator's question or instruction:\n{player_message}"
     )
+
+    retrieval_section = ""
+    if retrieved_context:
+        retrieval_section = (
+            "### Retrieved policy and framework context "
+            "(live from Foundry IQ)\n"
+            "The following passages were retrieved from the Helix Dynamics\n"
+            "compliance knowledge base in response to the investigator's\n"
+            "question. Cite specific source documents by name where they\n"
+            "support your analysis.\n\n"
+            f"{retrieved_context}\n\n"
+        )
+
+    return (
+        briefing
+        + retrieval_section
+        + "---\n\n"
+        + f"Investigator's question or instruction:\n{player_message}"
+    )
+
+
+def _fetch_retrieved_context(
+    query: str,
+    top_k: int = 5,
+    *,
+    stream_to_stdout: bool = False,
+) -> tuple[str, int]:
+    """Run a Foundry IQ retrieval and format the results.
+
+    Wraps ``retrieve_context`` and ``format_retrieved_context`` with
+    graceful failure handling. Search failures are logged (when streaming)
+    and produce an empty context block rather than an exception, so the
+    analyst can still respond using scenario-only context if Azure Search
+    is unavailable.
+
+    Args:
+        query: The text to search the index for (typically the player's
+            question, verbatim).
+        top_k: Maximum number of snippets to retrieve.
+        stream_to_stdout: If True, print a status notice when retrieval
+            fails. Status output for successful retrievals is handled by
+            the caller (so it appears alongside other agent timing info).
+
+    Returns:
+        A tuple of (formatted_context_string, retrieval_count). On any
+        failure, returns ("", 0).
+    """
+    try:
+        retrievals = retrieve_context(query, top_k=top_k)
+    except SearchClientError as exc:
+        if stream_to_stdout:
+            sys.stdout.write(
+                f"\n[Foundry IQ retrieval unavailable: {exc}. "
+                f"Proceeding with scenario-only context.]\n"
+            )
+            sys.stdout.flush()
+        return "", 0
+
+    return format_retrieved_context(retrievals), len(retrievals)
 
 
 # ---------------------------------------------------------------------------
@@ -181,6 +266,8 @@ def consult_forensic_analyst(
     temperature: float = DEFAULT_TEMPERATURE,
     stream_to_stdout: bool = False,
     max_retries: int = DEFAULT_MAX_RETRIES,
+    enable_retrieval: bool = True,
+    retrieval_top_k: int = 5,
 ) -> dict[str, Any]:
     """Run one turn of consultation with the Forensic Analyst.
 
@@ -197,17 +284,26 @@ def consult_forensic_analyst(
             because we want consistent reasoning and accurate citations).
         stream_to_stdout: If True, write chunks to stdout as they arrive.
         max_retries: Retry budget on content filter triggers. Default 1.
+        enable_retrieval: If True (default), retrieves policy and framework
+            passages from Foundry IQ and injects them into the user message
+            as additional grounding context. If False, skips the search
+            call entirely — useful for tests, offline runs, or scenarios
+            where the index is known to be unhelpful.
+        retrieval_top_k: Maximum number of snippets to retrieve. Default 5.
 
     Returns:
-        A dict with five keys:
+        A dict with six keys:
             - ``reply`` (str): the analyst's response
             - ``elapsed_seconds`` (float): wall-clock of final successful call
             - ``deployment`` (str): resolved deployment name
             - ``attempts`` (int): number of model calls made
             - ``scenario_id`` (str): convenience field
+            - ``retrieval_count`` (int): number of Foundry IQ snippets
+              injected into the user message (0 if disabled or failed)
 
     Raises:
-        ForensicAnalystError: For any failure.
+        ForensicAnalystError: For any model-side failure. NOT raised for
+            search failures — those degrade silently to retrieval_count=0.
     """
     if not player_message or not player_message.strip():
         raise ForensicAnalystError("player_message must be a non-empty string")
@@ -226,7 +322,25 @@ def consult_forensic_analyst(
     except AgentClientError as exc:
         raise ForensicAnalystError(str(exc)) from exc
 
-    user_message = _build_user_message(scenario, player_message)
+    # Foundry IQ retrieval (optional, graceful on failure).
+    retrieved_context_text = ""
+    retrieval_count = 0
+    if enable_retrieval:
+        retrieved_context_text, retrieval_count = _fetch_retrieved_context(
+            player_message,
+            top_k=retrieval_top_k,
+            stream_to_stdout=stream_to_stdout,
+        )
+        if stream_to_stdout and retrieval_count > 0:
+            sys.stdout.write(
+                f"[Retrieved {retrieval_count} relevant passages "
+                f"from Foundry IQ]\n"
+            )
+            sys.stdout.flush()
+
+    user_message = _build_user_message(
+        scenario, player_message, retrieved_context_text
+    )
 
     messages: list[dict[str, str]] = [{"role": "system", "content": system_prompt}]
     if conversation_history:
@@ -318,6 +432,7 @@ def consult_forensic_analyst(
         "deployment": deployment,
         "attempts": attempts,
         "scenario_id": scenario.get("scenario_id", "?"),
+        "retrieval_count": retrieval_count,
     }
 
 
@@ -384,6 +499,7 @@ def _smoke_test() -> int:
         print(f"OK    Consultation completed in {result['elapsed_seconds']:.1f}s")
     print(f"      deployment={result['deployment']}")
     print(f"      reply_length={len(result['reply'])} chars")
+    print(f"      foundry_iq_sources={result['retrieval_count']}")
     print("=" * 78)
     return 0
 

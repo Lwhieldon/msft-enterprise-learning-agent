@@ -10,10 +10,21 @@ incorrectly), the orchestrator invokes this agent to deliver the framework
 citation, the Helix Dynamics policy reference, and the practical takeaway
 the audience can action in their own organization.
 
-For the MVP, the wrapper passes the scenario's compliance_lesson and
-violated_controls directly into the user message rather than retrieving from
-Foundry IQ. The pre-built and generated scenarios both contain rich enough
-lesson content for the CO to elaborate on without live retrieval.
+Grounding:
+    The wrapper passes the scenario's compliance_lesson and violated_controls
+    directly into the user message. It also retrieves additional policy and
+    framework passages live from the Foundry IQ Azure AI Search index
+    (``compliance-content-index``) and injects them into the user message
+    as additional source material. The retrieval query is built from the
+    scenario's violated control identifiers (rather than the player's
+    accusation) since the CO is invoked at scene close and the relevant
+    grounding is the framework picture, not any specific player question.
+
+    Retrieval is on by default but degrades gracefully: if Azure Search is
+    unavailable or auth fails, the wrapper continues using scenario-only
+    context. The scenario JSON's compliance_lesson contains enough
+    substantive material for the CO to function; retrieval is enhancement,
+    not requirement.
 
 Architecture:
     The CO is invoked once per scene close. The wrapper takes the scenario,
@@ -28,11 +39,13 @@ Outcome labels:
 
 Public API:
     deliver_closer(scenario, accused_suspect_id, outcome, **opts) -> dict
-        One closing speech. Returns the speech plus timing metadata.
+        One closing speech. Returns the speech plus timing metadata and
+        retrieval count.
 
 Exceptions:
     ComplianceOfficerError
-        Raised for any failure.
+        Raised for any model-side failure. NOT raised for Azure Search
+        failures — those degrade silently.
 
 CLI:
     Running this module as a script loads the default scenario and runs the
@@ -59,6 +72,11 @@ from src.agents._azure_client import (
     build_azure_client,
     load_prompt,
     resolve_deployment,
+)
+from src.agents._search_client import (
+    SearchClientError,
+    format_retrieved_context,
+    retrieve_context,
 )
 
 # ---------------------------------------------------------------------------
@@ -176,17 +194,32 @@ def _format_violated_controls(controls: list[dict[str, Any]]) -> str:
 
 def _build_user_message(scenario: dict[str, Any],
                        accused_suspect_id: str | None,
-                       outcome: ComplianceOutcome) -> str:
+                       outcome: ComplianceOutcome,
+                       retrieved_context: str = "") -> str:
     """Compose the user-side message giving the CO the case briefing.
 
     The message provides only data: case identifiers, the outcome facts,
-    the violated controls (citation source material), and the lesson seed
-    text. The system prompt at ``compliance_officer.md`` defines structure,
-    tone, and length; we deliberately do not re-state those rules in the
-    user message because doing so triggered Azure's jailbreak detector
-    (which flags user messages that reference the system prompt).
+    the violated controls (citation source material), the lesson seed
+    text, and optionally a block of policy passages retrieved live from
+    Foundry IQ. The system prompt at ``compliance_officer.md`` defines
+    structure, tone, and length; we deliberately do not re-state those
+    rules in the user message because doing so triggered Azure's
+    jailbreak detector (which flags user messages that reference the
+    system prompt). The retrieval section uses the same pure-data shape
+    — it presents passages as labeled source material with no behavioral
+    instructions.
+
+    Args:
+        scenario: A merged scenario dict.
+        accused_suspect_id: The suspect_id the player accused, or None.
+        outcome: 'correct' | 'wrong_perpetrator' | 'no_accusation'.
+        retrieved_context: Optional pre-formatted text block of passages
+            retrieved live from Foundry IQ. When non-empty, injected as
+            an additional source-material section. When empty (default),
+            no retrieval section is included — preserves backward
+            compatibility for callers that do not use Foundry IQ.
     """
-    return (
+    base = (
         f"Case: {scenario.get('scenario_name', '?')} "
         f"({scenario.get('scenario_id', '?')})\n\n"
         f"## Case outcome\n\n{_format_outcome_briefing(scenario, accused_suspect_id, outcome)}\n\n"
@@ -194,8 +227,95 @@ def _build_user_message(scenario: dict[str, Any],
         f"{_format_violated_controls(scenario.get('violated_controls', []))}\n\n"
         f"## Compliance lesson source material\n\n"
         f"{scenario.get('compliance_lesson', '')}\n\n"
-        "Please deliver the post-scene closing segment for this case."
     )
+
+    retrieval_section = ""
+    if retrieved_context:
+        retrieval_section = (
+            "## Additional policy and framework passages "
+            "(live from Foundry IQ)\n\n"
+            f"{retrieved_context}\n\n"
+        )
+
+    return (
+        base
+        + retrieval_section
+        + "Please deliver the post-scene closing segment for this case."
+    )
+
+
+def _build_retrieval_query(scenario: dict[str, Any]) -> str:
+    """Build a Foundry IQ retrieval query from the scenario's violated controls.
+
+    The CO is invoked at scene close, not in response to a free-text
+    player question, so the most relevant grounding signal is the
+    framework picture. Concatenating the control identifiers gives the
+    search engine specific terminology (e.g., 'SOC 2 CC9.2', 'HIPAA
+    §164.308(b)', 'HD-SEC-AC-001') to match against indexed policy and
+    framework chunks.
+
+    Args:
+        scenario: A merged scenario dict.
+
+    Returns:
+        A space-separated string of framework + identifier tokens. Empty
+        string if the scenario has no violated controls.
+    """
+    controls = scenario.get("violated_controls", []) or []
+    parts: list[str] = []
+    for c in controls:
+        framework = c.get("framework", "").strip()
+        identifier = c.get("identifier", "").strip()
+        if framework and identifier:
+            parts.append(f"{framework} {identifier}")
+        elif identifier:
+            parts.append(identifier)
+        elif framework:
+            parts.append(framework)
+    return " ".join(parts)
+
+
+def _fetch_retrieved_context(
+    query: str,
+    top_k: int = 5,
+    *,
+    stream_to_stdout: bool = False,
+) -> tuple[str, int]:
+    """Run a Foundry IQ retrieval and format the results.
+
+    Wraps ``retrieve_context`` and ``format_retrieved_context`` with
+    graceful failure handling. Search failures are logged (when streaming)
+    and produce an empty context block rather than an exception, so the
+    CO can still deliver the closer using scenario-only context if Azure
+    Search is unavailable.
+
+    Args:
+        query: The text to search the index for (typically built from
+            ``_build_retrieval_query`` for CO).
+        top_k: Maximum number of snippets to retrieve.
+        stream_to_stdout: If True, print a status notice when retrieval
+            fails. Status output for successful retrievals is handled by
+            the caller.
+
+    Returns:
+        A tuple of (formatted_context_string, retrieval_count). On any
+        failure (including empty query), returns ("", 0).
+    """
+    if not query.strip():
+        return "", 0
+
+    try:
+        retrievals = retrieve_context(query, top_k=top_k)
+    except SearchClientError as exc:
+        if stream_to_stdout:
+            sys.stdout.write(
+                f"\n[Foundry IQ retrieval unavailable: {exc}. "
+                f"Proceeding with scenario-only context.]\n"
+            )
+            sys.stdout.flush()
+        return "", 0
+
+    return format_retrieved_context(retrievals), len(retrievals)
 
 
 # ---------------------------------------------------------------------------
@@ -213,6 +333,8 @@ def deliver_closer(
     temperature: float = DEFAULT_TEMPERATURE,
     stream_to_stdout: bool = False,
     max_retries: int = DEFAULT_MAX_RETRIES,
+    enable_retrieval: bool = True,
+    retrieval_top_k: int = 5,
 ) -> dict[str, Any]:
     """Run the Compliance Officer's post-scene closing segment.
 
@@ -229,17 +351,27 @@ def deliver_closer(
         temperature: Sampling temperature. Default 0.4.
         stream_to_stdout: If True, write chunks to stdout as they arrive.
         max_retries: Retry budget on content filter triggers. Default 1.
+        enable_retrieval: If True (default), retrieves policy and framework
+            passages from Foundry IQ (query built from the scenario's
+            violated controls) and injects them into the user message as
+            additional source material. If False, skips the search call
+            entirely — useful for tests, offline runs, or scenarios where
+            the index is known to be unhelpful.
+        retrieval_top_k: Maximum number of snippets to retrieve. Default 5.
 
     Returns:
-        A dict with five keys:
+        A dict with six keys:
             - ``speech`` (str): the CO's closing speech
             - ``elapsed_seconds`` (float)
             - ``deployment`` (str)
             - ``attempts`` (int)
             - ``outcome`` (str): echoed back for orchestrator convenience
+            - ``retrieval_count`` (int): number of Foundry IQ snippets
+              injected into the user message (0 if disabled or failed)
 
     Raises:
-        ComplianceOfficerError: For any failure.
+        ComplianceOfficerError: For any model-side failure. NOT raised for
+            search failures — those degrade silently to retrieval_count=0.
     """
     if outcome not in ("correct", "wrong_perpetrator", "no_accusation"):
         raise ComplianceOfficerError(
@@ -260,7 +392,28 @@ def deliver_closer(
     except AgentClientError as exc:
         raise ComplianceOfficerError(str(exc)) from exc
 
-    user_message = _build_user_message(scenario, accused_suspect_id, outcome)
+    # Foundry IQ retrieval (optional, graceful on failure). Query built
+    # from the violated control identifiers since the CO is invoked at
+    # scene close, not in response to a free-text question.
+    retrieved_context_text = ""
+    retrieval_count = 0
+    if enable_retrieval:
+        retrieval_query = _build_retrieval_query(scenario)
+        retrieved_context_text, retrieval_count = _fetch_retrieved_context(
+            retrieval_query,
+            top_k=retrieval_top_k,
+            stream_to_stdout=stream_to_stdout,
+        )
+        if stream_to_stdout and retrieval_count > 0:
+            sys.stdout.write(
+                f"[Retrieved {retrieval_count} relevant passages "
+                f"from Foundry IQ]\n"
+            )
+            sys.stdout.flush()
+
+    user_message = _build_user_message(
+        scenario, accused_suspect_id, outcome, retrieved_context_text
+    )
 
     messages: list[dict[str, str]] = [
         {"role": "system", "content": system_prompt},
@@ -375,6 +528,7 @@ def deliver_closer(
         "deployment": deployment,
         "attempts": attempts,
         "outcome": outcome,
+        "retrieval_count": retrieval_count,
     }
 
 
@@ -436,6 +590,7 @@ def _smoke_test() -> int:
     print(f"      outcome={result['outcome']}")
     print(f"      speech_length={len(result['speech'])} chars "
           f"(~{len(result['speech'].split())} words)")
+    print(f"      foundry_iq_sources={result['retrieval_count']}")
     print("=" * 78)
     return 0
 

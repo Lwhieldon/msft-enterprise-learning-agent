@@ -245,7 +245,13 @@ class Orchestrator:
         history.append({"role": "assistant", "content": result["reply"]})
         self.total_agent_seconds += result["elapsed_seconds"]
         attempt_note = f", {result['attempts']} attempts" if result["attempts"] > 1 else ""
-        print(f"{LABEL_INFO} {result['elapsed_seconds']:.1f}s{attempt_note}")
+        retrieval_note = (
+            f", {result['retrieval_count']} sources"
+            if result.get("retrieval_count", 0) > 0
+            else ""
+        )
+        print(f"{LABEL_INFO} {result['elapsed_seconds']:.1f}s{attempt_note}"
+              f"{retrieval_note}")
 
     def cmd_accuse(self, rest: str) -> None:
         suspect_id = rest.strip()
@@ -291,7 +297,13 @@ class Orchestrator:
         self.total_agent_seconds += result["elapsed_seconds"]
         self.closed = True
         attempt_note = f", {result['attempts']} attempts" if result["attempts"] > 1 else ""
-        print(f"{LABEL_INFO} {result['elapsed_seconds']:.1f}s{attempt_note}  "
+        retrieval_note = (
+            f", {result['retrieval_count']} sources"
+            if result.get("retrieval_count", 0) > 0
+            else ""
+        )
+        print(f"{LABEL_INFO} {result['elapsed_seconds']:.1f}s{attempt_note}"
+              f"{retrieval_note}  "
               f"(~{len(result['speech'].split())} words)")
         print(f"{LABEL_INFO} Scene closed. Use `reset` to replay or `quit` to exit.")
 
@@ -311,7 +323,13 @@ class Orchestrator:
         self.total_agent_seconds += result["elapsed_seconds"]
         self.closed = True
         attempt_note = f", {result['attempts']} attempts" if result["attempts"] > 1 else ""
-        print(f"{LABEL_INFO} {result['elapsed_seconds']:.1f}s{attempt_note}  "
+        retrieval_note = (
+            f", {result['retrieval_count']} sources"
+            if result.get("retrieval_count", 0) > 0
+            else ""
+        )
+        print(f"{LABEL_INFO} {result['elapsed_seconds']:.1f}s{attempt_note}"
+              f"{retrieval_note}  "
               f"(~{len(result['speech'].split())} words)")
         print(f"{LABEL_INFO} Scene closed. Use `reset` to replay or `quit` to exit.")
 

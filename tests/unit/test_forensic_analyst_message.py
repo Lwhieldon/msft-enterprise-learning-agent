@@ -203,3 +203,88 @@ class TestBuildUserMessage:
             "Player question should appear after the case briefing in the "
             "user message structure."
         )
+
+
+# ---------------------------------------------------------------------------
+# _build_user_message — retrieved context injection
+# ---------------------------------------------------------------------------
+
+
+class TestBuildUserMessageWithRetrievedContext:
+    """Cover the new ``retrieved_context`` parameter on ``_build_user_message``.
+
+    The existing TestBuildUserMessage tests above continue to use the
+    2-arg signature; the default empty string preserves the legacy
+    behavior (no retrieval section in the output). These tests cover the
+    new behavior when retrieved context is supplied.
+    """
+
+    def test_empty_retrieved_context_does_not_add_section(self, default_scenario):
+        """Empty default preserves the message shape for callers that
+        don't use Foundry IQ retrieval (and for every existing test).
+
+        Note: we check for the unique section header text — not the bare
+        string 'Foundry IQ' — because the scenario data itself may mention
+        Foundry IQ as a named system in Helix's tech stack.
+        """
+        msg = _build_user_message(
+            default_scenario, "What happened?", retrieved_context=""
+        )
+        assert "Retrieved policy and framework context" not in msg
+        assert "live from Foundry IQ" not in msg
+
+    def test_omitted_retrieved_context_does_not_add_section(self, default_scenario):
+        """Calling with the 2-arg signature must still work and must not
+        add a retrieval section."""
+        msg = _build_user_message(default_scenario, "What happened?")
+        assert "Retrieved policy and framework context" not in msg
+        assert "live from Foundry IQ" not in msg
+
+    def test_non_empty_retrieved_context_adds_section(self, default_scenario):
+        retrieved = (
+            "[Source 1: access_control_policy.md]\n"
+            "Vendor accounts must be sponsored by a Helix Dynamics manager."
+        )
+        msg = _build_user_message(
+            default_scenario, "What happened?", retrieved_context=retrieved
+        )
+        assert "Retrieved policy and framework context" in msg
+        assert "live from Foundry IQ" in msg
+        assert "access_control_policy.md" in msg
+        assert "sponsored by a Helix Dynamics manager" in msg
+
+    def test_retrieved_context_appears_between_briefing_and_question(
+        self, default_scenario
+    ):
+        """The retrieval section must land AFTER the case briefing but
+        BEFORE the player's question. This positioning matters because
+        the model treats the final question as 'the ask' and prior
+        sections as 'the context'."""
+        retrieved = (
+            "[Source 1: access_control_policy.md]\n"
+            "Sample policy text content here."
+        )
+        question = "VERYUNIQUEPLAYERQUESTIONABC123"
+        msg = _build_user_message(
+            default_scenario, question, retrieved_context=retrieved
+        )
+        idx_briefing = msg.index("Case briefing")
+        idx_retrieved = msg.index("Retrieved policy")
+        idx_question = msg.index(question)
+        assert idx_briefing < idx_retrieved < idx_question
+
+    def test_retrieved_context_does_not_displace_scenario_data(
+        self, default_scenario
+    ):
+        """Adding retrieved context must not strip any of the scenario
+        briefing sections — evidence, controls, suspects, premise should
+        all still be present."""
+        retrieved = "[Source 1: policy.md]\nSample policy."
+        msg = _build_user_message(
+            default_scenario, "Question?", retrieved_context=retrieved
+        )
+        assert "### Premise" in msg
+        assert "### Suspects" in msg
+        assert "### Evidence available to you" in msg
+        assert "### Violated controls" in msg
+        assert "### Involved systems" in msg
