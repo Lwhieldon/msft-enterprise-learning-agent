@@ -223,3 +223,7 @@ __marimo__/
 
 # Additional
 2-reasoning-agents/
+
+# Compliance Academy local artifacts
+scenario_generator_debug.txt
+stress_report.json

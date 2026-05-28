@@ -124,32 +124,81 @@ One line. Pick one of:
 
 ## Pre-Stream Checklist (T-30 minutes)
 
-Hardware and accounts:
+Work through these in order. Authentication first, because every Foundry verification step below it depends on a valid Azure CLI session.
+
+### Hardware and accounts
 
 - [ ] Streamyard joined, mic and camera tested
 - [ ] Phone silenced, Teams notifications off
 - [ ] Water within reach
 
-Foundry and models:
+### Authentication and environment (DO NOT SKIP)
+
+Azure CLI tokens expire roughly one hour after `az login`. The demo is ~1 hour long. Log in at T-30, verify at T-5, and you have margin for the full broadcast.
+
+- [ ] Python venv activated: `.\.venv\Scripts\Activate.ps1` (prompt shows `(.venv)`)
+- [ ] `.env` file present in repo root with a valid `AZURE_AI_PROJECT_ENDPOINT`
+- [ ] Authenticated to Azure CLI: `az login`
+- [ ] Correct subscription active: `az account show` shows the SC&H Foundry subscription
+- [ ] Unit tests pass (no API calls, instant):
+  ```powershell
+  pytest
+  ```
+  All tests under `tests/unit/` should pass. If anything fails here, the build is broken and no live call will help; fix before going live.
+- [ ] Loader smoke test passes (no API calls, instant, streams scenario summary):
+  ```powershell
+  python -m src.scenario_loader
+  ```
+  Three `OK` lines expected.
+- [ ] Scenario Generator smoke test passes (one live API call, ~40-60s):
+  ```powershell
+  python -m src.agents.scenario_generator
+  ```
+  Streamed JSON, ends with `OK`. If this fails on `DefaultAzureCredential`, re-run `az login` and retry.
+- [ ] Suspect agent smoke test passes (one live API call, ~5-10s):
+  ```powershell
+  python -m src.agents.suspect_agent
+  ```
+  Casey Doyle response streamed in character, ends with `OK`.
+
+### Day-before dry run (T-1 day)
+
+The day before the live battle, do a full integration test pass. This is the most expensive single check (~10-15 minutes, ~20 live calls) but it catches every category of failure we have seen in development: content filter false positives, jailbreak detector false positives, length cap issues, and any new regressions.
+
+- [ ] All integration tests pass:
+  ```powershell
+  pytest -m integration
+  ```
+  All tests under `tests/integration/` should pass. Any failure indicates a real demo risk worth investigating before stream day.
+- [ ] Full orchestrator dry run executed: load default scenario, interrogate at least three suspects, consult the Forensic Analyst, generate a hot-loaded scenario from a host-style breach, accuse the perpetrator, hear the Compliance Officer closer. End-to-end demo path verified.
+
+### Foundry and models
 
 - [ ] Foundry project deployed and reachable
 - [ ] Model Router deployment healthy
 - [ ] Claude Sonnet 4.5 and Haiku 4.5 deployments healthy in the Foundry resource
 - [ ] Foundry IQ index populated with synthetic policy documents
 
-Application:
+### Application
 
 - [ ] Default Helix Dynamics scenario loaded
-- [ ] Backup scenarios (`solarwinds_backup.json`, `mgm_backup.json`) verified end-to-end
+- [ ] Backup scenarios (`helix_dynamics_supplychain.json`, `helix_dynamics_vishing.json`) verified end-to-end
 - [ ] Chainlit UI running on a dedicated tab
 - [ ] Second Chainlit tab pre-warmed as backup
 
-Stream materials:
+### Stream materials
 
 - [ ] Architecture diagram open in a separate tab
 - [ ] Concept doc open as a reference for any host questions
 - [ ] Backup demo video accessible
 - [ ] Public repo URL handy for the close
+
+### Final 5-minute auth re-verification (T-5 minutes)
+
+Quick sanity check right before going live. Token from `az login` at T-30 should still be valid, but verifying takes 2 seconds and avoids a mid-demo failure.
+
+- [ ] `az account get-access-token --output none` returns no error
+- [ ] If it does error, re-run `az login`, then re-run the Suspect agent smoke test as a final live check
 
 ## After the Battle
 

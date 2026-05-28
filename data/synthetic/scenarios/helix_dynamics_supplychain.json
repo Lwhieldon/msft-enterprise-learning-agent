@@ -67,7 +67,7 @@
         "HR Liaison gently raises the question of whether Reeves' concerns were technically valid"
       ],
       "is_perpetrator": false,
-      "is_red_herring": true
+      "is_red_herring": false
     },
     {
       "suspect_id": "morgan_webb",
@@ -137,6 +137,11 @@
       "open_knowledge": "Will describe the audit prep work in detail, including the change management ticket review Jordan started two weeks ago. Will mention noticing several incomplete change tickets including some from Morgan's team.",
       "guarded_knowledge": "Will admit, if pressed, that the Compliance Director told Jordan to focus on documentation completeness, not to second-guess approvers. Jordan has notes on several specific tickets that did not look right but never escalated them.",
       "hidden_truth": "Three weeks ago, Jordan flagged the CelarisLabs change ticket pattern to the Compliance Director, specifically pointing out that the code signature verification field had been blank on the last twelve CelarisLabs deployments. The Compliance Director told Jordan it was 'a procedural issue, not a finding' and to focus on more material issues for the upcoming SOC 2. Jordan documented the conversation in a personal notebook but did not write a formal observation. This is the audit trail that would have caught the unsafe deployment process before the breach. Jordan is going to feel terrible about this when it surfaces but did not cause the breach.",
+      "scenario_style_note": "Defensive and frightened when the conversation lands on the notebook. Knows the notes look like cover-up.",
+      "scenario_voice_examples": [
+        "I wrote that down because I wanted there to be a record. I did not write it up formally because I was told not to.",
+        "I know how it reads. It is not what it looks like."
+      ],
       "leak_conditions": [
         "Compliance Auditor asks Jordan about any audit observations Jordan has drafted but not formally filed",
         "Investigator asks Jordan about the change management ticket review work",
@@ -144,7 +149,7 @@
         "HR Liaison asks Jordan if Jordan has felt that observations were being suppressed"
       ],
       "is_perpetrator": false,
-      "is_red_herring": false
+      "is_red_herring": true
     }
   ],
   "evidence_seeds": [
@@ -286,13 +291,13 @@
       {"from": "EV-004", "to": "build_pipeline_compromise", "relationship": "confirms"},
       {"from": "EV-004", "to": "signature_verification_skipped", "relationship": "would_have_caught"},
       {"from": "EV-004", "to": "SI-7", "relationship": "would_have_satisfied"},
-      {"from": "EV-005", "to": "alex_chen", "relationship": "implicates_red_herring"},
+      {"from": "EV-005", "to": "alex_chen", "relationship": "implicates_via_termination_gap"},
       {"from": "EV-005", "to": "early_warning_suppressed", "relationship": "shows_dismissal"},
       {"from": "EV-006", "to": "casey_doyle", "relationship": "shows_documentary_role"},
       {"from": "EV-006", "to": "early_warning_suppressed", "relationship": "documents_suppression"},
       {"from": "EV-007", "to": "build_pipeline_compromise", "relationship": "corroborates_external"},
       {"from": "EV-007", "to": "vendor_disclosure_gap", "relationship": "identifies"},
-      {"from": "EV-008", "to": "jordan_smith", "relationship": "shows_audit_observation_suppressed"},
+      {"from": "EV-008", "to": "jordan_smith", "relationship": "appears_to_implicate_red_herring"},
       {"from": "EV-008", "to": "signature_verification_skipped", "relationship": "documents_prior_warning"},
       {"from": "EV-009", "to": "morgan_webb", "relationship": "confirms_admin_responsibility"},
       {"from": "EV-009", "to": "build_pipeline_compromise", "relationship": "explains_execution_context"},
@@ -306,5 +311,5 @@
       {"from": "signature_verification_skipped", "to": "ISO_A.5.23", "relationship": "violates"}
     ]
   },
-  "compliance_lesson": "The player identified Morgan Webb as the proximate perpetrator. That is correct in the sense that her control failure made the breach possible. The actual attacker is a state-sponsored threat actor who compromised CelarisLabs' build pipeline four months ago and used Helix Dynamics' trusted plugin update mechanism as the delivery vehicle. Morgan did not collaborate with the attacker. Morgan failed to perform code signature verification before deploying the malicious update, which HD-SEC-AC-001 §6.3 explicitly required.\n\nThe framework picture has three layers. First, SOC 2 CC8.1 (change management) and NIST 800-53 SI-7 (software and firmware integrity) were violated. Morgan's pattern of skipping signature verification spanned twelve consecutive CelarisLabs deployments. The procedural gap was documented in audit notebooks (Jordan's notes) and dismissed by the Compliance Director as procedural rather than material. SI-7 specifically calls out the requirement to verify digital signatures of software before installation. If the verification had been performed, the hash mismatch in EV-004 would have caught the malicious build before deployment. Second, NIST 800-53 SR-3 (supply chain controls) and HD-SEC-VR-001 §6 (vendor questionnaire) were violated. The CelarisLabs annual re-assessment was eleven months stale. The vendor's security incident four months ago should have triggered out-of-cycle re-assessment but Helix Dynamics had no detection mechanism for vendor-side incidents that the vendor itself chose not to disclose. Third, the early warning suppression issue documented in Reeves' emails (EV-005) and Jordan's notes (EV-008) is not a framework violation but a culture issue that connects to ISO 27001 A.5.23 (third-party services) and points to a control environment problem the Audit Committee should hear about.\n\nThe practical takeaways for the audience are three-fold. First, manual signature verification is precisely the kind of control that erodes under time pressure. If your environment relies on humans to verify signatures, the verification needs to be automated and machine-enforced, not procedurally required. Second, vendor security incidents are an asymmetric information problem. When your vendor knows something you do not, your only defense is your own integrity verification at the point of installation. Third, when audit observations get dismissed as procedural rather than material, ask who is making that call and on what basis. Procedural observations sometimes turn into the next material weakness. Game Master, back to you."
+  "compliance_lesson": "The player identified Morgan Webb as the proximate perpetrator. That is correct in the sense that her control failure made the breach possible. The actual attacker is a state-sponsored threat actor who compromised CelarisLabs' build pipeline four months ago and used Helix Dynamics' trusted plugin update mechanism as the delivery vehicle. Morgan did not collaborate with the attacker. Morgan failed to perform code signature verification before deploying the malicious update, which HD-SEC-AC-001 §6.3 explicitly required.\n\nJordan Smith's personal notebook (EV-008) looked, on first inspection, like an audit observation that was deliberately not formalized to protect the Compliance Director or to avoid the awkwardness of escalating a senior colleague's judgment. The reality is that Jordan raised the concern in a 1:1 with the Compliance Director and was instructed to drop it. The notebook is Jordan's compliance with that instruction, not a cover-up. This is what an honest junior compliance professional looks like when their observation is suppressed: documented to themselves, deferred on the formal record, frustrated but compliant. The genuine cultural failure here is in how the Compliance Director triaged the observation, not in Jordan's documentation choices.\n\nThe framework picture has three layers. First, SOC 2 CC8.1 (change management) and NIST 800-53 SI-7 (software and firmware integrity) were violated. Morgan's pattern of skipping signature verification spanned twelve consecutive CelarisLabs deployments. The procedural gap was documented in audit notebooks (Jordan's notes) and dismissed by the Compliance Director as procedural rather than material. SI-7 specifically calls out the requirement to verify digital signatures of software before installation. If the verification had been performed, the hash mismatch in EV-004 would have caught the malicious build before deployment. Second, NIST 800-53 SR-3 (supply chain controls) and HD-SEC-VR-001 §6 (vendor questionnaire) were violated. The CelarisLabs annual re-assessment was eleven months stale. The vendor's security incident four months ago should have triggered out-of-cycle re-assessment but Helix Dynamics had no detection mechanism for vendor-side incidents that the vendor itself chose not to disclose. Third, the early warning suppression issue documented in Reeves' emails (EV-005) and Jordan's notes (EV-008) is not a framework violation but a culture issue that connects to ISO 27001 A.5.23 (third-party services) and points to a control environment problem the Audit Committee should hear about.\n\nThe practical takeaways for the audience are three-fold. First, manual signature verification is precisely the kind of control that erodes under time pressure. If your environment relies on humans to verify signatures, the verification needs to be automated and machine-enforced, not procedurally required. Second, vendor security incidents are an asymmetric information problem. When your vendor knows something you do not, your only defense is your own integrity verification at the point of installation. Third, when audit observations get dismissed as procedural rather than material, ask who is making that call and on what basis. Procedural observations sometimes turn into the next material weakness. Game Master, back to you."
 }

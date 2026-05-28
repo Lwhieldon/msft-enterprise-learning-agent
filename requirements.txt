@@ -1,0 +1,19 @@
+# Compliance Academy - Python dependencies
+
+# Azure OpenAI client (used by the Scenario Generator and other agent wrappers)
+openai>=1.40.0
+
+# Entra ID auth via DefaultAzureCredential (picks up az login)
+azure-identity>=1.15.0
+
+# Load .env files at module load so CLI smoke tests pick up Azure config
+python-dotenv>=1.0.0
+
+# -- Test dependencies (pytest discovers tests/ automatically) --
+
+# pytest: test runner and assertion engine
+pytest>=8.0.0
+
+# pytest-mock: convenient mocker fixture for unit tests that need to stub
+# out Azure calls without hitting the network
+pytest-mock>=3.12.0

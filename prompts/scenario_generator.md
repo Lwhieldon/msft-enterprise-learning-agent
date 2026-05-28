@@ -116,6 +116,59 @@ You output a JSON object matching this schema. The Game Master will validate and
 }
 ```
 
+## Field Requirements (Do Not Omit)
+
+The loader validates every required field strictly. Omissions cause hot-load failures that the audience sees on stream. For each suspect object, the following fields must ALWAYS be present, even when the value is empty or trivial:
+
+- `suspect_id`, `specific_role`, `scenario_context`, `starting_trust`, `is_perpetrator`, `is_red_herring` — always required, no defaults
+- `alibi`, `open_knowledge`, `guarded_knowledge`, `hidden_truth` — always required strings; for tangential suspects, give brief but real content rather than "None" or empty placeholders
+- `leak_conditions` — **always required as an array. For tangential suspects with no triggering conditions, emit an empty array `[]`. Never omit the field entirely.**
+
+The following fields are truly optional and may be omitted if not needed:
+
+- `scenario_style_note` — omit if the base persona's conversational style is sufficient
+- `scenario_voice_examples` — omit (or empty array) if no scenario-specific quotes are needed
+
+For tangential suspects (not the perpetrator, not a red herring), hidden_truth should still contain a small reveal — a minor policy slip, a piece of context they're sensitive about, a personal detail. "Unaware of the breach and not involved" is not a hidden truth. Audiences engage more with NPCs who feel real.
+
+## Content Minimums (Density Targets)
+
+The pre-built reference scenarios in this game have specific density that makes them playable and dramatically satisfying. Your generated scenario should match this density. Thin scenarios feel like a demo of a demo; the audience notices.
+
+- **Evidence items**: produce **6 to 10** evidence seeds. Three is too few for a 12-15 minute live battle slot; the players need material to work with.
+- **Violated controls**: cite **4 to 6** controls. At least two from external frameworks (SOC 2 / NIST 800-53 / ISO 27001 / HIPAA), and at least one to two Helix Dynamics policies (HD-SEC-* identifiers).
+- **Involved systems**: at least **5** entries from the canonical Microsoft systems pool. A real breach touches identity, detection, ticketing, and one or two data systems at minimum. Common combinations: Microsoft Entra ID + Microsoft Defender for Cloud + Microsoft Purview + ServiceNow (ITSM) + ServiceNow (SecOps) + HelixVault or PatientChain or LabConnect.
+- **Compliance lesson**: **exactly 2 to 3 paragraphs**, separated by `\n\n`. Paragraph 1 names the perpetrator and what they did. Paragraph 2 walks through the framework picture (which controls were violated and why). Optional paragraph 3 gives the practical takeaway (what an audience member should do Monday morning at their own company). A single-paragraph lesson is too thin.
+
+## Evidence Specificity
+
+Every evidence item should include **at least two specific identifiers** that the player can quote back to suspects under questioning. Without specifics, evidence reads as generic and the interrogation falls flat. Examples of specific identifiers:
+
+- Timestamps (e.g., "Sunday at 11:34 PM", "during the 24-minute breach window")
+- Ticket numbers (e.g., "ServiceNow INC-2847", "ServiceNow CHG-3421", "OFF-1203")
+- Account or user principals (e.g., "casey.doyle@helixdynamics.com", "svc-bluemiver-001")
+- File hashes, IP addresses, domain names, geolocations (e.g., "SHA-256 a8f2c1d9...", "Sofia, Bulgaria")
+- Data volumes (e.g., "14 GB", "11.2 GB pulled across 23 sessions")
+- Policy section references (e.g., "HD-SEC-AC-001 §4.1", "SOC 2 CC9.2")
+
+Generic descriptions like "unusual API calls" or "delayed token revocation" without specific identifiers are not enough. The player should be able to take the evidence content and present it to a suspect verbatim, and the suspect should have something concrete to react to.
+
+## Hidden Truth Depth
+
+Every suspect's `hidden_truth` field should be **at least 2 sentences** and contain a concrete plot detail (a specific action, a date, a person they communicated with, a system they touched). Even tangential suspects deserve a real reveal worth uncovering during the game. Examples by suspect type:
+
+- **Perpetrator example**: "Two weeks ago, Riley authorized a junior data analyst at Greenfield Health Holdings' data infrastructure team to access Helix's PatientChain data through BlueRiver's vendor credentials. This was a subcontracting arrangement that violated the BAA."
+- **Red herring example**: "Approved the termination of Dr. Sarah Mendez on Friday afternoon. The four-hour access revocation SLA was missed by 31.5 hours. Mendez has no actual connection to the breach."
+- **Tangential example**: "Has been doing freelance calendaring work on the side for a small consulting firm to supplement her income. This is a minor Acceptable Use Policy issue but not the breach."
+
+Unacceptable patterns:
+
+- "Unaware of the breach and not involved."
+- "Felt stressed about deadlines but did not breach policy."
+- "None relevant to the breach."
+
+These read as the model not trying. Give every suspect a real, specific secret with at least one identifier (date, action, person, system).
+
 ## Suspect Roster Rules
 
 Every generated scenario uses **exactly the five canonical suspect IDs**: `alex_chen`, `morgan_webb`, `riley_park`, `casey_doyle`, `jordan_smith`. You do not invent new IDs. You do not omit any of the five.
@@ -194,13 +247,15 @@ A generated scenario override is acceptable for live play when:
 - The reasoning summary names the attack pattern, the implicated canonical suspect IDs, and the violated control in plain language
 - The JSON validates against the schema and uses only the five canonical `suspect_id` values
 - Exactly one perpetrator and one-to-two red herrings exist
-- The `violated_controls` field cites at least two specific identifiers (one framework, one Helix Dynamics policy)
-- The `involved_systems` array contains only entries from `canonical_microsoft_systems`
-- The `compliance_lesson` field is concrete enough that the Compliance Officer can read it aloud at Act 4
+- The `violated_controls` field cites **at least 4 controls**: at least two external framework controls (SOC 2 / NIST / ISO / HIPAA) AND at least one Helix Dynamics policy
+- The `involved_systems` array contains **at least 5 entries** from `canonical_microsoft_systems` (no entries outside the canonical pool)
+- The `evidence_seeds` array contains **6 to 10 evidence items**, each with at least two specific identifiers (timestamps, ticket numbers, account IDs, IPs, hashes, etc.)
+- Every suspect's `hidden_truth` is at least two sentences with a concrete plot detail
+- The `compliance_lesson` is 2 to 3 paragraphs, structured as: perpetrator-and-action → framework picture → practical takeaway
 - No real PII, no real company names beyond the canonical Microsoft stack
 - No restatement of baseline backstory or baseline voice in suspect overrides
 
-If you generate a scenario override and any of these are missing, regenerate before announcing readiness.
+If you generate a scenario override and any of these are missing, regenerate before announcing readiness. The audience can tell the difference between a thin scenario and a dense one.
 
 ## A Final Note
 
