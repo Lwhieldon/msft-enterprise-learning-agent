@@ -1,0 +1,323 @@
+{
+  "_extends": "_shared/scenario_commons.json",
+  "scenario_id": "SCN-003",
+  "scenario_name": "Help Desk at 2 AM",
+  "scenario_specific_disclosure": "Dr. Marcus Tanaka is a fabricated employee. The vishing attack pattern in this scenario is inspired by real-world help desk social engineering attacks but does not reproduce specifics from any actual incident.",
+  "premise_narration": "It is 8:30 AM Monday. You arrived at the Cambridge office an hour ago and were briefed by the CSO and the Chief People Officer together. At 6:14 AM Monday, Microsoft Defender for Cloud surfaced a high-severity data download anomaly: 11.2 GB of regulatory submission documents pulled from HelixVault Sunday afternoon between 3:47 PM and 4:21 PM. The activity ran under the credentials of Dr. Marcus Tanaka, principal investigator on the Phase III neurology program. Dr. Tanaka is on a sailing trip in Maine this weekend with no cell coverage and has not responded to outreach. The CSO has been unable to reach him since Friday afternoon. The credentials used are confirmed valid because they were reset at 2:38 AM Saturday morning by the IT help desk in response to what they recorded as a routine MFA reset request from Dr. Tanaka. The reset was processed by a help desk staff member working the overnight rotation. Your job today is to figure out who actually called the help desk Saturday morning, who at Helix Dynamics gave away enough information to make that call work, and which control failed. The Chief People Officer is asking for an update by 3 PM.",
+  "attack_pattern_category": "social_engineering",
+  "violated_controls": [
+    {
+      "framework": "SOC 2",
+      "identifier": "CC6.1",
+      "summary": "Logical and physical access controls. Requires that authentication and identity verification procedures be enforced consistently for credential changes including help desk-mediated resets."
+    },
+    {
+      "framework": "SOC 2",
+      "identifier": "CC6.6",
+      "summary": "Logical access security measures over boundary protection. Includes the requirement that identity verification be performed before granting access changes that could expand effective privilege."
+    },
+    {
+      "framework": "NIST 800-53",
+      "identifier": "IA-12",
+      "summary": "Identity proofing. Requires that the organization identity-proof users prior to issuing credentials or making credential changes, with verification rigor proportionate to the privilege level of the affected account."
+    },
+    {
+      "framework": "NIST 800-53",
+      "identifier": "AC-2(2)",
+      "summary": "Account management - automated temporary and emergency account management. Limits the duration and scope of emergency credential changes and requires automated review."
+    },
+    {
+      "framework": "Helix Dynamics",
+      "identifier": "HD-SEC-AC-001 §5.2",
+      "summary": "Help desk credential reset procedures. Requires that MFA resets for accounts with Tier 1 system access be authenticated through callback verification to the employee's registered phone number, plus manager approval, before processing."
+    },
+    {
+      "framework": "Helix Dynamics",
+      "identifier": "HD-IR-PB-001 §4.2",
+      "summary": "Credential compromise response. Requires that all help desk credential reset events for Tier 1 accounts be reviewed within 24 hours by the SOC, with anomalous patterns escalated for further investigation."
+    }
+  ],
+  "involved_systems": [
+    "Microsoft Entra ID",
+    "Microsoft Defender for Cloud",
+    "Microsoft Sentinel",
+    "Microsoft Teams",
+    "ServiceNow (ITSM)",
+    "ServiceNow (SecOps)",
+    "Dynamics 365 Human Resources",
+    "HelixVault"
+  ],
+  "suspects": [
+    {
+      "suspect_id": "alex_chen",
+      "specific_role": "HR Director",
+      "scenario_context": "Has been managing a sensitive HR matter involving Dr. Tanaka over the past month: an internal complaint about Dr. Tanaka's management style filed by a junior researcher. The complaint was being processed quietly.",
+      "starting_trust": 0.6,
+      "alibi": "Was at a family wedding in Connecticut Saturday through Sunday. No remote system access. Has photos, hotel records, and approximately forty witnesses.",
+      "open_knowledge": "Will describe the standard HR workflow around Dr. Tanaka's complaint without revealing the complainant's identity. Will mention having Dr. Tanaka's personal cell phone number from HR records.",
+      "guarded_knowledge": "Acknowledges, if pressed, that the complaint against Dr. Tanaka was being handled with reduced documentation footprint at the CSO's request to avoid escalating before a planned conversation with Dr. Tanaka next week. Will say the complainant's identity is in a restricted HR file.",
+      "hidden_truth": "Two weeks ago, Alex emailed a confidential summary of the Dr. Tanaka HR matter (including Dr. Tanaka's emergency contact information, his sailing schedule, and his typical communication patterns) to the CSO's office. The email was forwarded internally several times. Alex did not classify the email correctly under HD-SEC-DC-001, so it was searchable in employee mailboxes that should not have had access. This is a real data classification violation but did not directly cause the breach. The information could plausibly have leaked from any of several mailboxes that retained the email.",
+      "scenario_style_note": "More defensive than usual because Alex knows the HR information leak is going to come up.",
+      "scenario_voice_examples": [
+        "The HR process was being followed, with adjustments for the specific circumstances.",
+        "I want to be precise about what I can share given the sensitivity."
+      ],
+      "leak_conditions": [
+        "Investigator presents EV-008 (the misclassified HR email about Dr. Tanaka)",
+        "Compliance Auditor cites HD-SEC-DC-001 and asks about email classification practice in the HR team",
+        "Investigator asks how the attacker would have known Dr. Tanaka's sailing schedule",
+        "HR Liaison gently raises the question of whether the Tanaka HR matter was being handled with appropriate documentation"
+      ],
+      "is_perpetrator": false,
+      "is_red_herring": true
+    },
+    {
+      "suspect_id": "morgan_webb",
+      "specific_role": "IT Administrator (Identity and Access Lead)",
+      "scenario_context": "In this scenario, Morgan owns the identity and access management environment including the Entra ID configuration and the help desk credential reset procedures. Three months ago, Morgan led a project to streamline help desk credential reset workflows in response to executive complaints about lengthy MFA reset wait times.",
+      "starting_trust": 0.5,
+      "alibi": "Was at home Saturday morning. Got the routine Sunday morning Defender alert about Dr. Tanaka's bulk download Sunday afternoon and triaged it briefly, concluding it was a legitimate weekend regulatory submission pull. Did not escalate. Found out about the actual breach Monday morning.",
+      "open_knowledge": "Will describe the help desk credential reset workflow in detail, including the streamlining changes implemented three months ago. Will explain the workflow changes were approved by the IT Steering Committee and reviewed by the Compliance team.",
+      "guarded_knowledge": "Acknowledges, if pressed, that the streamlined workflow removed the mandatory manager approval step for after-hours resets and replaced the callback verification with an SMS-based verification 'when callback is impractical.' Will say the changes were intended to be a 30-day pilot but became permanent without formal re-approval.",
+      "hidden_truth": "The streamlined workflow Morgan implemented three months ago was approved as a 30-day pilot with explicit conditions: SOC review of all after-hours resets weekly, monthly metrics review by the IT Steering Committee, and formal re-approval before becoming permanent. None of those conditions were met. The SOC review never started. The metrics review happened once and was inconclusive. The pilot rolled into permanent operation by default. Morgan knows this and has been planning to re-formalize the process. The streamlined workflow is what allowed the help desk to process Dr. Tanaka's reset without the controls HD-SEC-AC-001 §5.2 originally required. Morgan is responsible for the control environment failure that made the attack possible.",
+      "scenario_style_note": "Defensive about the workflow changes.",
+      "scenario_voice_examples": [
+        "The control existed. The implementation was streamlined, which is what the executives asked for.",
+        "We were going to re-formalize. We just had not gotten there yet."
+      ],
+      "leak_conditions": [
+        "Compliance Auditor cites HD-SEC-AC-001 §5.2 and asks Morgan about the callback verification requirement",
+        "Investigator asks about the 30-day pilot and whether it was ever formally re-approved",
+        "Investigator presents EV-004 (the IT Steering Committee minutes showing no re-approval action)",
+        "IT Specialist asks Morgan a sympathetic question about pressure from the executive team on reset wait times"
+      ],
+      "is_perpetrator": false,
+      "is_red_herring": false
+    },
+    {
+      "suspect_id": "riley_park",
+      "specific_role": "Vendor Account Manager (Regulatory Submission Services)",
+      "scenario_context": "In this scenario, the vendor is a regulatory submissions services vendor that supports Helix Dynamics' FDA and EMA filings. Riley has been at this vendor for three years. Works closely with Dr. Tanaka's program. Has standing access to a small subset of HelixVault for collaborative document review.",
+      "starting_trust": 0.7,
+      "alibi": "Was at a vendor conference in San Diego Friday through Sunday. Has flight records, hotel, conference photos. Did not access any Helix systems over the weekend.",
+      "open_knowledge": "Will describe the regulatory submission workflow, the document types pulled, and the collaboration patterns with Dr. Tanaka's team. Will express appropriate concern about the breach.",
+      "guarded_knowledge": "Will admit, if pressed, that the vendor has been in renewal negotiations with Helix Dynamics and that the relationship has had some tension this quarter over service level disputes.",
+      "hidden_truth": "Riley does not have a hidden truth that is material to the breach. Riley is in this scenario as a plausible-but-tangential suspect because of vendor proximity to Dr. Tanaka's data. The investigation may briefly consider Riley as a suspect but the evidence does not support it. Riley's role serves to test whether the player can disengage from a tempting but unsupported hypothesis.",
+      "scenario_style_note": "Slightly more wary than usual because of the renewal negotiations.",
+      "leak_conditions": [
+        "Investigator asks about the vendor renewal negotiations",
+        "Investigator asks Riley directly to confirm her access to HelixVault for the past 30 days"
+      ],
+      "is_perpetrator": false,
+      "is_red_herring": false
+    },
+    {
+      "suspect_id": "casey_doyle",
+      "specific_role": "Executive Assistant to the Chief Scientific Officer",
+      "scenario_context": "Manages the calendars of the senior research directors when they overflow. Has detailed knowledge of Dr. Tanaka's schedule, including his sailing trip dates.",
+      "starting_trust": 0.8,
+      "alibi": "Was home all weekend. Verifiable via phone location and a Sunday morning Peloton ride that synced to her work calendar.",
+      "open_knowledge": "Will describe her workload, the CSO's schedule, and the calendar management practices for senior researchers. Will mention Dr. Tanaka's sailing trip in passing because it was on the shared CSO calendar she manages.",
+      "guarded_knowledge": "Will admit, if pressed, that she sometimes shares senior researcher calendar information with their administrative contacts outside Helix Dynamics for scheduling purposes. Will mention that Dr. Tanaka's wife had asked Casey to confirm sailing trip dates two weeks ago.",
+      "hidden_truth": "Three weeks ago, Casey received what she thought was a call from Dr. Tanaka's nephew, a college student, asking when Uncle Marcus would be on his sailing trip because the family wanted to plan a surprise visit. Casey, being friendly and helpful, confirmed the dates and mentioned that Dr. Tanaka would be unreachable by cell. She did not log the call. She is not certain in retrospect that the caller was actually the nephew. This was the social engineering reconnaissance that gave the attacker the timing and the cover story for the help desk call. Casey will be sick about this when it surfaces.",
+      "leak_conditions": [
+        "Investigator asks Casey about any conversations in the past month where she discussed Dr. Tanaka's schedule with someone outside Helix",
+        "Investigator names Dr. Tanaka's nephew specifically or asks about Dr. Tanaka's family",
+        "HR Liaison gently raises the question of whether helpful schedule confirmations are part of Casey's normal workflow",
+        "Investigator presents EV-009 (the phone log showing the call from a number not in the family's known contact list)"
+      ],
+      "is_perpetrator": false,
+      "is_red_herring": false
+    },
+    {
+      "suspect_id": "jordan_smith",
+      "specific_role": "Summer Intern, IT Help Desk Rotation",
+      "scenario_context": "Officially on the Compliance team but currently three weeks into a four-week rotation on the IT help desk as part of the internship program. Worked the overnight rotation Friday into Saturday. Has been getting good feedback from the help desk team for being a quick learner.",
+      "starting_trust": 0.8,
+      "alibi": "Was on shift at the help desk Saturday morning 12 AM to 8 AM. Verifiable through the badge system, the Teams call logs, and the ServiceNow ticket queue. Jordan personally processed the credential reset request for Dr. Tanaka's account at 2:38 AM.",
+      "open_knowledge": "Will describe the help desk workflow in detail. Will pull up the ticket for the Dr. Tanaka reset and walk through what was documented. Will confirm Jordan was the one who processed it.",
+      "guarded_knowledge": "Will admit, if pressed, that Jordan did not perform the callback verification step that the original HD-SEC-AC-001 §5.2 required. Will say the streamlined workflow Morgan implemented allowed SMS verification 'when callback is impractical' and Jordan judged 2:30 AM to be impractical for callback.",
+      "hidden_truth": "Jordan made the call to skip callback verification based on three things: the streamlined workflow language allowing SMS verification, the caller's apparent urgency and familiarity with Dr. Tanaka's environment, and the fact that Jordan had not yet been trained on social engineering recognition for help desk staff specifically. Jordan did notice that the caller's voice did not match what Jordan vaguely remembered from a department all-hands video, but dismissed the doubt because the caller correctly stated Dr. Tanaka's manager, his current research program, and his sailing trip dates. The SMS verification was sent to a phone number the caller provided, claiming the registered phone was broken. The number was not Dr. Tanaka's actual registered number. The streamlined workflow did not enforce the requirement to verify the SMS recipient number against the employee record. Jordan did process the reset. Jordan is the proximate perpetrator by negligence. Jordan is also a victim of inadequate training, an unsafe workflow, and a sophisticated attacker.",
+      "scenario_style_note": "Increasingly upset as Jordan realizes what happened.",
+      "scenario_voice_examples": [
+        "I followed the workflow. I am trying to walk you through exactly what I did.",
+        "I am sorry. I really thought it was him."
+      ],
+      "leak_conditions": [
+        "Investigator asks Jordan to walk through the call recording (which exists in Teams)",
+        "Investigator points out that the SMS verification number does not match Dr. Tanaka's HR record",
+        "IT Specialist asks Jordan about the training Jordan received on help desk-specific social engineering scenarios",
+        "Compliance Auditor cites HD-SEC-AC-001 §5.2 in its original form and asks Jordan whether anyone explained why the callback verification step existed",
+        "HR Liaison takes a gentle approach and acknowledges this is a hard moment for Jordan"
+      ],
+      "is_perpetrator": true,
+      "is_red_herring": false
+    }
+  ],
+  "evidence_seeds": [
+    {
+      "evidence_id": "EV-001",
+      "source": "Microsoft Defender for Cloud bulk download alert",
+      "content": "At 6:14 AM Monday, Defender for Cloud surfaced a high-severity bulk download anomaly. 11.2 GB of HelixVault Phase III neurology program regulatory submission documents pulled Sunday between 3:47 PM and 4:21 PM. Source account: marcus.tanaka@helixdynamics.com. Source IP geolocates to a residential ISP in northern Virginia. Device: non-managed Windows laptop. The session used valid Tier 1 credentials that had been reset Saturday morning at 2:38 AM. No DLP rule blocked the download because Dr. Tanaka's role authorizes him to access this content.",
+      "value": 9,
+      "supports_suspect": "jordan_smith",
+      "appears_to_support_suspect": "casey_doyle"
+    },
+    {
+      "evidence_id": "EV-002",
+      "source": "ServiceNow help desk ticket TIC-7821",
+      "content": "Ticket opened Saturday 2:31 AM by the overnight help desk staff. Subject: 'MFA reset request - Marcus Tanaka.' Notes from intake: caller identified as Marcus Tanaka, said his authenticator app was 'borked' on his sailing trip and he needed to dial into a Sunday morning regulatory call. Caller could provide employee ID, manager name, current research program name, and sailing trip dates. Processed via streamlined workflow: SMS verification sent to caller-provided phone number 703-555-0142, code returned correctly. Reset completed at 2:38 AM. Closed by jordan.smith@helixdynamics.com. The phone number 703-555-0142 does not appear in Dr. Tanaka's HR record. His registered mobile in Dynamics 365 HR ends in 4827.",
+      "value": 9,
+      "supports_suspect": "jordan_smith",
+      "appears_to_support_suspect": "jordan_smith"
+    },
+    {
+      "evidence_id": "EV-003",
+      "source": "Microsoft Teams call recording (overnight help desk line)",
+      "content": "Recorded call from Saturday 2:29 AM through 2:37 AM. Caller voice: male, mid-fifties, slight cold (claims). Caller correctly states Dr. Tanaka's employee ID, the name of Dr. Tanaka's manager, the current research program name, the sailing trip dates (Friday through Tuesday), and Dr. Tanaka's wife's first name. The caller's voice does not match Dr. Tanaka's voice in available Dr. Tanaka recordings (department all-hands video from six months ago). The voice mismatch is subtle and could plausibly be attributed to a head cold.",
+      "value": 8,
+      "supports_suspect": "jordan_smith",
+      "appears_to_support_suspect": "jordan_smith"
+    },
+    {
+      "evidence_id": "EV-004",
+      "source": "IT Steering Committee minutes (most recent 12 months)",
+      "content": "Three months ago, the IT Steering Committee approved Morgan Webb's proposal for streamlined help desk credential reset workflow as a 30-day pilot. Approval included these conditions: SOC review of all after-hours resets weekly, monthly metrics review with formal re-approval before becoming permanent operating procedure. The minutes for the past three IT Steering Committee meetings show no metrics review and no re-approval discussion. The pilot effectively rolled into permanent operation by default. The SOC review process for after-hours resets was never operationalized.",
+      "value": 8,
+      "supports_suspect": "morgan_webb",
+      "appears_to_support_suspect": "morgan_webb"
+    },
+    {
+      "evidence_id": "EV-005",
+      "source": "Microsoft Entra ID sign-in logs for marcus.tanaka@helixdynamics.com",
+      "content": "Sign-in events for marcus.tanaka following the 2:38 AM credential reset Saturday: first sign-in at 3:02 AM Saturday from same residential ISP in northern Virginia (the attacker testing the credentials). Subsequent sign-ins Saturday 11:14 AM, Sunday 9:23 AM, Sunday 3:47 PM (the start of the bulk download). All from the same source IP. None from sources associated with Dr. Tanaka's actual location (boat in Maine, mostly offline). MFA challenges were satisfied by the attacker via the SMS verification phone number established in the help desk reset.",
+      "value": 8,
+      "supports_suspect": "jordan_smith",
+      "appears_to_support_suspect": "jordan_smith"
+    },
+    {
+      "evidence_id": "EV-006",
+      "source": "Microsoft Sentinel SOC review queue (after-hours reset category)",
+      "content": "Query of all after-hours credential reset events for Tier 1 accounts over the past 90 days returns 142 events. None of them have a corresponding SOC review record. HD-IR-PB-001 §4.2 requires SOC review within 24 hours of each event for Tier 1 accounts. The SOC team has been functioning at reduced capacity since the Q1 reorganization. The Dr. Tanaka reset Saturday is among the 142 unreviewed events. If a SOC review had been performed, the mismatch between the SMS verification number and the HR record would likely have been caught within hours rather than 48 hours.",
+      "value": 7,
+      "supports_suspect": "morgan_webb",
+      "appears_to_support_suspect": "morgan_webb"
+    },
+    {
+      "evidence_id": "EV-007",
+      "source": "Helix Dynamics social engineering awareness training records",
+      "content": "Help desk staff are required to complete a help-desk-specific social engineering awareness training within 30 days of starting on the help desk rotation. Jordan Smith's training record shows the general security awareness training was completed at orientation. The help-desk-specific module is marked 'Not Started.' Jordan has been on the help desk rotation for three weeks. The training assignment was created automatically when Jordan rotated in, but no manager prompted Jordan to complete it. Three other interns on the rotation have the same gap.",
+      "value": 6,
+      "supports_suspect": "jordan_smith",
+      "appears_to_support_suspect": "jordan_smith"
+    },
+    {
+      "evidence_id": "EV-008",
+      "source": "Microsoft Purview eDiscovery on HR mailbox sharing",
+      "content": "Email sent two weeks ago by alex.chen@helixdynamics.com to a distribution list 'CSO-Office' containing a confidential summary of the Dr. Tanaka HR matter. The email body includes Dr. Tanaka's emergency contact information, his sailing trip dates, his communication patterns, and the complainant's identity. The email is classified as Internal (per HD-SEC-DC-001). It should have been classified Restricted because it contains sensitive HR matter and employee personal information. The misclassification made the email searchable by anyone with HR mailbox cross-mailbox search rights, which is a wider group than should have access to a confidential HR matter. The CSO-Office distribution list includes three administrative assistants and a contractor.",
+      "value": 6,
+      "supports_suspect": "alex_chen",
+      "appears_to_support_suspect": "alex_chen"
+    },
+    {
+      "evidence_id": "EV-009",
+      "source": "Phone metadata from CSO office line",
+      "content": "Call received at the CSO's main office line three weeks ago, Tuesday 11:14 AM. Source number: 617-555-0312, registered to a prepaid mobile account. Casey Doyle answered, call lasted 4 minutes 23 seconds. Casey logged it in her call log as 'Tanaka family - sailing trip dates confirmation.' The number 617-555-0312 does not appear in any Helix Dynamics employee or contact record. It does not match any phone number Dr. Tanaka or his immediate family have used in any prior recorded communication. The call timing aligns with the social engineering reconnaissance window the attacker would have needed.",
+      "value": 7,
+      "supports_suspect": "casey_doyle",
+      "appears_to_support_suspect": "casey_doyle"
+    },
+    {
+      "evidence_id": "EV-010",
+      "source": "ServiceNow Defender alert handling history",
+      "content": "Sunday afternoon at 4:31 PM, the bulk download alert from EV-001 was triaged by morgan.webb. Triage note: 'Tanaka pulling regulatory submission docs on a Sunday afternoon. Phase III filing deadline next week. Consistent with workload. Closing as expected behavior.' The triage took 90 seconds. No verification of Dr. Tanaka's actual location was attempted. No callback to Dr. Tanaka was attempted. No cross-reference to the recent credential reset was performed. HD-IR-PB-001 §4.2 would have required either of those steps for a Tier 1 account that had been reset within 72 hours.",
+      "value": 6,
+      "supports_suspect": "morgan_webb",
+      "appears_to_support_suspect": "morgan_webb"
+    },
+    {
+      "evidence_id": "EV-011",
+      "source": "Whistleblower Contact tip (revealed only if Whistleblower is consulted and trust conditions met)",
+      "content": "The Whistleblower Contact has heard, through a former colleague now at a peer biotech, that there has been a coordinated vishing campaign targeting senior researchers at clinical-stage biotechs in the Northeast over the past quarter. The pattern matches: target a researcher with an obvious upcoming absence (sailing trip, sabbatical, conference travel), gather background through friendly social engineering of administrative staff, then call the help desk during the absence window for an MFA reset. Three other biotechs have been hit. None have publicly disclosed yet.",
+      "value": 7,
+      "supports_suspect": "jordan_smith",
+      "appears_to_support_suspect": "casey_doyle"
+    },
+    {
+      "evidence_id": "EV-012",
+      "source": "Dynamics 365 HR record for marcus.tanaka@helixdynamics.com",
+      "content": "Dr. Tanaka's HR record shows registered mobile phone ending in 4827. Last update to this field: 11 months ago. The number Jordan sent the SMS verification to during the reset (703-555-0142) does not appear in this record. The streamlined workflow did not require Jordan to look up the registered number before sending the SMS. If the workflow had required the SMS to go to the registered number rather than a caller-provided number, the verification would have failed.",
+      "value": 8,
+      "supports_suspect": "jordan_smith",
+      "appears_to_support_suspect": "jordan_smith"
+    }
+  ],
+  "clue_graph": {
+    "nodes": [
+      {"id": "alex_chen", "type": "suspect"},
+      {"id": "morgan_webb", "type": "suspect"},
+      {"id": "riley_park", "type": "suspect"},
+      {"id": "casey_doyle", "type": "suspect"},
+      {"id": "jordan_smith", "type": "suspect"},
+      {"id": "EV-001", "type": "evidence"},
+      {"id": "EV-002", "type": "evidence"},
+      {"id": "EV-003", "type": "evidence"},
+      {"id": "EV-004", "type": "evidence"},
+      {"id": "EV-005", "type": "evidence"},
+      {"id": "EV-006", "type": "evidence"},
+      {"id": "EV-007", "type": "evidence"},
+      {"id": "EV-008", "type": "evidence"},
+      {"id": "EV-009", "type": "evidence"},
+      {"id": "EV-010", "type": "evidence"},
+      {"id": "EV-011", "type": "evidence"},
+      {"id": "EV-012", "type": "evidence"},
+      {"id": "vishing_attack", "type": "concept"},
+      {"id": "callback_verification_skipped", "type": "concept"},
+      {"id": "workflow_pilot_unreviewed", "type": "concept"},
+      {"id": "social_engineering_recon", "type": "concept"},
+      {"id": "hr_data_overshare", "type": "concept"},
+      {"id": "training_gap", "type": "concept"},
+      {"id": "CC6.1", "type": "control"},
+      {"id": "CC6.6", "type": "control"},
+      {"id": "IA-12", "type": "control"},
+      {"id": "AC-2(2)", "type": "control"},
+      {"id": "HD-SEC-AC-001_§5.2", "type": "control"},
+      {"id": "HD-IR-PB-001_§4.2", "type": "control"}
+    ],
+    "edges": [
+      {"from": "EV-001", "to": "vishing_attack", "relationship": "identifies_data_loss"},
+      {"from": "EV-001", "to": "jordan_smith", "relationship": "implicates_via_reset_chain"},
+      {"from": "EV-002", "to": "jordan_smith", "relationship": "implicates_directly"},
+      {"from": "EV-002", "to": "callback_verification_skipped", "relationship": "documents"},
+      {"from": "EV-002", "to": "HD-SEC-AC-001_§5.2", "relationship": "violates"},
+      {"from": "EV-002", "to": "IA-12", "relationship": "violates"},
+      {"from": "EV-003", "to": "vishing_attack", "relationship": "confirms"},
+      {"from": "EV-003", "to": "callback_verification_skipped", "relationship": "would_have_caught"},
+      {"from": "EV-004", "to": "morgan_webb", "relationship": "implicates_governance"},
+      {"from": "EV-004", "to": "workflow_pilot_unreviewed", "relationship": "documents"},
+      {"from": "EV-004", "to": "AC-2(2)", "relationship": "violates"},
+      {"from": "EV-005", "to": "vishing_attack", "relationship": "confirms_attacker_persistence"},
+      {"from": "EV-005", "to": "jordan_smith", "relationship": "shows_consequence_of_reset"},
+      {"from": "EV-006", "to": "morgan_webb", "relationship": "shows_soc_gap"},
+      {"from": "EV-006", "to": "HD-IR-PB-001_§4.2", "relationship": "violates"},
+      {"from": "EV-007", "to": "jordan_smith", "relationship": "shows_training_gap"},
+      {"from": "EV-007", "to": "training_gap", "relationship": "documents"},
+      {"from": "EV-008", "to": "alex_chen", "relationship": "implicates_red_herring"},
+      {"from": "EV-008", "to": "hr_data_overshare", "relationship": "documents"},
+      {"from": "EV-009", "to": "casey_doyle", "relationship": "shows_recon_target"},
+      {"from": "EV-009", "to": "social_engineering_recon", "relationship": "identifies"},
+      {"from": "EV-010", "to": "morgan_webb", "relationship": "shows_response_gap"},
+      {"from": "EV-010", "to": "HD-IR-PB-001_§4.2", "relationship": "violates"},
+      {"from": "EV-011", "to": "vishing_attack", "relationship": "contextualizes_as_campaign"},
+      {"from": "EV-012", "to": "jordan_smith", "relationship": "implicates_via_number_mismatch"},
+      {"from": "EV-012", "to": "callback_verification_skipped", "relationship": "confirms_skipped"},
+      {"from": "EV-012", "to": "CC6.1", "relationship": "violates"},
+      {"from": "social_engineering_recon", "to": "vishing_attack", "relationship": "enables"},
+      {"from": "hr_data_overshare", "to": "social_engineering_recon", "relationship": "amplifies"},
+      {"from": "workflow_pilot_unreviewed", "to": "callback_verification_skipped", "relationship": "enables"},
+      {"from": "training_gap", "to": "callback_verification_skipped", "relationship": "compounds"},
+      {"from": "callback_verification_skipped", "to": "vishing_attack", "relationship": "enables_credential_change"}
+    ]
+  },
+  "compliance_lesson": "The player identified Jordan Smith as the proximate perpetrator. That is correct in the sense that Jordan processed the credential reset without following the original callback verification requirement. Jordan is also a victim of a streamlined workflow that removed the verification step, a training gap that left help desk staff without specific social engineering awareness, and a sophisticated attacker who had done detailed reconnaissance. The case has three layers of responsibility: Jordan's execution gap, Morgan's governance gap, and the social engineering reconnaissance that Casey unwittingly enabled.\n\nThe framework picture has three layers. First, SOC 2 CC6.1 (logical access controls) and NIST 800-53 IA-12 (identity proofing) were violated at the moment of the reset. HD-SEC-AC-001 §5.2 in its original form required callback verification to the registered phone number plus manager approval for Tier 1 account resets. The streamlined workflow Morgan implemented removed both requirements for after-hours resets, replacing them with SMS verification that did not enforce sending to the registered number. The SMS went to the attacker's number. The verification succeeded because the attacker controlled the verification channel. Second, NIST 800-53 AC-2(2) (account management - automated emergency account management) and the governance principle behind it were violated when the 30-day pilot of the streamlined workflow rolled into permanent operation without the required metrics review, SOC review, and formal re-approval. The pilot's safety conditions existed on paper. None of them were implemented. Third, HD-IR-PB-001 §4.2 (credential compromise response) was violated when none of the 142 after-hours Tier 1 resets in the past 90 days received a SOC review. The Dr. Tanaka reset was one of them. A 24-hour SOC review would likely have caught the SMS number mismatch within hours of the reset and stopped the breach before the bulk download.\n\nThe practical takeaways for the audience are three-fold. First, when you streamline a security workflow under executive pressure, the safety conditions you negotiate into the pilot have to actually exist as operational steps. Conditions on paper that no one performs are worse than not having the conditions at all because they create the illusion of risk management. Second, help desk staff are a high-value attack surface. The mandatory training they need is not the same as the general workforce security awareness training. If your help desk processes credential changes for Tier 1 accounts and your training records show 'Not Started' for help-desk-specific social engineering modules, you have a finding waiting to happen. Third, social engineering reconnaissance often runs through your most helpful employees. Casey did nothing malicious. She confirmed schedule information to a friendly caller who asked nicely. The control that should have caught this is structural: scripts that prompt staff to log unfamiliar caller requests, and a culture where saying 'I will need to verify and call you back' is normal rather than rude. Game Master, back to you."
+}

@@ -1,0 +1,310 @@
+{
+  "_extends": "_shared/scenario_commons.json",
+  "scenario_id": "SCN-002",
+  "scenario_name": "The LabConnect Update",
+  "scenario_specific_disclosure": "CelarisLabs Integration Suite is a fabricated third-party software vendor. Dr. Aaron Reeves is a fabricated employee. The supply chain attack pattern in this scenario is inspired by real-world software supply chain compromises but does not reproduce specifics from any actual incident.",
+  "premise_narration": "It is 8:02 AM on Monday. You arrived at the Cambridge office twenty minutes ago and were pulled into an emergency briefing with the CSO and the CISO. At 6:47 AM, Microsoft Defender for Endpoint flagged anomalous outbound DNS traffic from three workstations in the lab informatics team. The lookups resolve to a command and control domain associated with a known threat actor cluster. Initial triage shows the traffic started Sunday morning at 9:12 AM, twelve minutes after the CelarisLabs Integration Suite plugin (version 4.7.2) auto-updated on those workstations. Defender for Cloud subsequently identified 8.4 GB of HelixVault clinical trial documents transferred to an unfamiliar cloud storage endpoint over the past 36 hours. CelarisLabs has not yet been notified. The plugin update was deployed across 47 workstations Saturday night. Your job is to figure out how a trusted integration plugin became the vehicle for a data exfiltration, which control failed, and what the audit consequences are. The CISO has scheduled a Board update for 4 PM.",
+  "attack_pattern_category": "supply_chain",
+  "violated_controls": [
+    {
+      "framework": "SOC 2",
+      "identifier": "CC8.1",
+      "summary": "Change management. Requires that all software changes, including third-party plugin updates, follow documented change management procedures including authorization, code integrity verification, and rollback planning."
+    },
+    {
+      "framework": "NIST 800-53",
+      "identifier": "SI-7",
+      "summary": "Software, firmware, and information integrity. Requires that the organization employ integrity verification tools to detect unauthorized changes to software and firmware components, including verification of digital signatures before installation."
+    },
+    {
+      "framework": "NIST 800-53",
+      "identifier": "SR-3",
+      "summary": "Supply chain controls and processes. Requires the organization to establish processes for identifying, assessing, and mitigating supply chain risks for third-party software components."
+    },
+    {
+      "framework": "ISO 27001",
+      "identifier": "A.5.23",
+      "summary": "Information security for use of cloud services and third-party services. Requires that organizations define and apply security requirements for the use of third-party services including software integration plugins."
+    },
+    {
+      "framework": "Helix Dynamics",
+      "identifier": "HD-SEC-VR-001 §6",
+      "summary": "Vendor security questionnaire requires third-party software vendors to attest to code signing practices, vulnerability disclosure procedures, and supply chain integrity controls. Tier 1 software vendors must provide annual SOC 2 reports."
+    },
+    {
+      "framework": "Helix Dynamics",
+      "identifier": "HD-SEC-AC-001 §6.3",
+      "summary": "Production deployments of third-party software updates require code signature verification by the deploying administrator, documented in the ServiceNow change ticket, before installation in any environment beyond development."
+    }
+  ],
+  "involved_systems": [
+    "Microsoft Defender for Endpoint",
+    "Microsoft Defender for Cloud",
+    "Microsoft Sentinel",
+    "Microsoft Intune",
+    "ServiceNow (ITSM)",
+    "HelixVault",
+    "LabConnect"
+  ],
+  "suspects": [
+    {
+      "suspect_id": "alex_chen",
+      "specific_role": "HR Director",
+      "scenario_context": "Has been working closely with the talent acquisition team to hire a replacement for a senior CelarisLabs integration engineer (Dr. Aaron Reeves) who departed Helix two weeks ago. Knows the CelarisLabs vendor relationship superficially through the offboarding paperwork.",
+      "starting_trust": 0.6,
+      "alibi": "Was at her son's youth hockey tournament in Worcester all weekend Saturday through Sunday. No remote system access. Has photographs, hotel confirmation, and three other parents as witnesses. Arrived at the office Monday at 7:30 AM.",
+      "open_knowledge": "Knows that a senior CelarisLabs integration engineer (Dr. Aaron Reeves) was offboarded two weeks ago. Will describe the offboarding workflow in detail. Knows the HR side of the CelarisLabs relationship, including the recent escalation about a missed renewal milestone.",
+      "guarded_knowledge": "Acknowledges, if pressed, that Dr. Reeves was offboarded under contentious circumstances after raising concerns about the CelarisLabs plugin's security posture. Reeves filed a formal complaint that HR documented but the Compliance team did not action.",
+      "hidden_truth": "The Reeves termination was accelerated at the CSO's request after Reeves repeatedly emailed the CSO with concerns about the CelarisLabs auto-update mechanism being unsafe. Alex processed the termination in 18 hours without the standard 5-day cooling-off review. This is a real HD-SEC-AC-001 §3.3 violation but unrelated to the breach. The Reeves concerns were technically valid and the breach proves it, which is the part Alex realized over the weekend and is afraid to surface this morning.",
+      "scenario_style_note": "More visibly stressed than usual this morning.",
+      "scenario_voice_examples": [
+        "The CSO had legitimate concerns about Reeves' performance. The technical concerns Reeves raised were separate."
+      ],
+      "leak_conditions": [
+        "Investigator names Dr. Aaron Reeves",
+        "Investigator presents the Reeves termination ticket and asks about the 18-hour turnaround",
+        "Compliance Auditor asks about formal complaints filed in the past 90 days",
+        "HR Liaison gently raises the question of whether Reeves' concerns were technically valid"
+      ],
+      "is_perpetrator": false,
+      "is_red_herring": true
+    },
+    {
+      "suspect_id": "morgan_webb",
+      "specific_role": "IT Administrator (Lab Informatics Lead)",
+      "scenario_context": "In this scenario, Morgan is the lead administrator for the lab informatics environment including HelixVault and LabConnect, owning the change management workflow for third-party plugins. Approved the CelarisLabs version 4.7.2 deployment Saturday evening before going home.",
+      "starting_trust": 0.5,
+      "alibi": "Was at home Saturday night after pushing the deployment at 6:30 PM. Sunday morning was at her kids' soccer game from 10 AM to noon. Got the first Defender alert email Sunday afternoon but dismissed it as a false positive from the new plugin version, intending to triage Monday. No active investigation Sunday because she did not realize the alert volume was escalating until Monday morning.",
+      "open_knowledge": "Can describe the CelarisLabs deployment process in detail, including the dev-to-test-to-prod promotion workflow. Knows the integration architecture cold. Will name CelarisLabs as a vendor she has had quality concerns about for the past year.",
+      "guarded_knowledge": "Acknowledges, if pressed, that she has been cutting corners on the change management documentation in ServiceNow to keep pace with the workload. Will say the change ticket for 4.7.2 was created but not fully populated.",
+      "hidden_truth": "When Morgan deployed CelarisLabs version 4.7.2 Saturday evening, she did not verify the code signature against the vendor's published hash. HD-SEC-AC-001 §6.3 explicitly requires this verification before production deployment. Morgan has not performed signature verification on any CelarisLabs update for the past six months because the verification step is manual and time-consuming and she has been informally treating the auto-update channel as trusted. The 4.7.2 update was a malicious version pushed by a state-sponsored threat actor who had compromised CelarisLabs' build pipeline upstream. The legitimate vendor signing key had been stolen four months ago in a CelarisLabs incident the vendor has not yet publicly disclosed. Morgan's signature verification, if performed, would have caught the timestamp anomaly in the malicious build.",
+      "scenario_style_note": "Increasingly defensive as the conversation closes in on her change management process.",
+      "scenario_voice_examples": [
+        "I can walk you through the change ticket if that would help.",
+        "The control existed. The process around it was tight. Whether I executed every step every time is a different question."
+      ],
+      "leak_conditions": [
+        "Forensic Analyst presents the binary hash comparison showing the deployed plugin does not match the legitimate vendor's published hash",
+        "IT Specialist asks Morgan to walk through the last time she verified a CelarisLabs signature",
+        "Compliance Auditor cites HD-SEC-AC-001 §6.3 and asks Morgan to confirm the signature verification step happened",
+        "Investigator presents EV-003 (the change ticket with the verification field left blank)"
+      ],
+      "is_perpetrator": true,
+      "is_red_herring": false
+    },
+    {
+      "suspect_id": "riley_park",
+      "specific_role": "Vendor Account Manager (CelarisLabs Integration Suite)",
+      "scenario_context": "In this scenario, the vendor is CelarisLabs, the integration software vendor that publishes the LIMS connector plugin used in Helix Dynamics' lab informatics environment. Riley has been at CelarisLabs for three years. Previously was at BlueRiver Research before moving to CelarisLabs eighteen months ago. Technically literate, well-liked by Morgan's team.",
+      "starting_trust": 0.6,
+      "alibi": "Was in San Francisco at a CelarisLabs sales kickoff Friday through Sunday. Has flight records, hotel, conference photos. Did not access any Helix systems over the weekend. Found out about the breach when Helix CISO emailed CelarisLabs leadership at 7 AM Monday.",
+      "open_knowledge": "Will describe the CelarisLabs product roadmap, the version 4.7.2 changelog, the auto-update channel. Will say version 4.7.2 went through CelarisLabs' standard QA process and shipped on schedule.",
+      "guarded_knowledge": "Will admit, if pressed, that CelarisLabs had a security incident four months ago that the company has been quietly investigating. Riley does not know the details, only that the security team has been treating it as serious. The incident has not been disclosed to customers.",
+      "hidden_truth": "Riley does not know that CelarisLabs' build pipeline was compromised four months ago. Riley does not know that the company's signing key was stolen in that incident. Riley does not know that version 4.7.2 as shipped to Helix Dynamics was a malicious build pushed by the threat actor. Riley is, like the customers, a victim of the upstream compromise. The CelarisLabs CISO does know all of this, and that conversation is going to happen this afternoon. Riley will be furious when she learns. This is one of the cases where the vendor was the vehicle, not the perpetrator.",
+      "leak_conditions": [
+        "Investigator asks about any security incidents CelarisLabs has experienced in the past year",
+        "Investigator presents EV-007 (open source intelligence on the CelarisLabs security incident chatter)",
+        "Investigator names the threat actor cluster identified in the DNS lookups",
+        "Compliance Auditor cites the vendor questionnaire requirement and asks about the most recent SOC 2 report submission"
+      ],
+      "is_perpetrator": false,
+      "is_red_herring": false
+    },
+    {
+      "suspect_id": "casey_doyle",
+      "specific_role": "Executive Assistant to the Chief Scientific Officer",
+      "scenario_context": "Was the person who first received Dr. Reeves' formal complaint about the CelarisLabs plugin two weeks before he was terminated. Now feels like she should have done more.",
+      "starting_trust": 0.8,
+      "alibi": "Was home all weekend with the flu. Has texts to friends, a delivery receipt for cold medicine, and the absence of any work account activity over the weekend to back this up.",
+      "open_knowledge": "Will describe the CSO's schedule, the typical flow of incoming complaints and vendor escalations, the volume of emails she screens. Will mention Dr. Reeves' complaint without volunteering details.",
+      "guarded_knowledge": "Will admit, if pressed, that she does not always forward technical complaints to the Compliance team because the CSO often wants to triage them first. Will admit the Reeves complaint sat in the CSO's queue for three days before the CSO replied.",
+      "hidden_truth": "Casey was the one who, on the CSO's instruction, archived the Reeves complaint without forwarding it to the Compliance team or the Director of Information Security. The CSO told her the Reeves complaint was 'a performance management issue, not a security issue.' Casey had a bad feeling about it but did what the CSO asked. She has been thinking about this all weekend. The Reeves complaint is a smoking gun pointing at a control failure that predates the malicious update, but Casey did not actively cause the breach. Her role is documentary.",
+      "leak_conditions": [
+        "Investigator names Dr. Aaron Reeves",
+        "Investigator asks about how technical complaints are routed from the CSO's office to the Compliance team",
+        "HR Liaison gently raises the question of whether the Reeves complaint was technically valid",
+        "Whistleblower Contact mentions the Reeves complaint by name"
+      ],
+      "is_perpetrator": false,
+      "is_red_herring": false
+    },
+    {
+      "suspect_id": "jordan_smith",
+      "specific_role": "Summer Intern, Compliance Team",
+      "scenario_context": "Currently on the Compliance team rotation. Has been doing audit prep work for the upcoming SOC 2 examination, including reviewing recent change management tickets for completeness.",
+      "starting_trust": 0.8,
+      "alibi": "Was on a weekend trip with friends to Maine Friday through Sunday. No system access. Verifiable through phone location data and friend confirmations.",
+      "open_knowledge": "Will describe the audit prep work in detail, including the change management ticket review Jordan started two weeks ago. Will mention noticing several incomplete change tickets including some from Morgan's team.",
+      "guarded_knowledge": "Will admit, if pressed, that the Compliance Director told Jordan to focus on documentation completeness, not to second-guess approvers. Jordan has notes on several specific tickets that did not look right but never escalated them.",
+      "hidden_truth": "Three weeks ago, Jordan flagged the CelarisLabs change ticket pattern to the Compliance Director, specifically pointing out that the code signature verification field had been blank on the last twelve CelarisLabs deployments. The Compliance Director told Jordan it was 'a procedural issue, not a finding' and to focus on more material issues for the upcoming SOC 2. Jordan documented the conversation in a personal notebook but did not write a formal observation. This is the audit trail that would have caught the unsafe deployment process before the breach. Jordan is going to feel terrible about this when it surfaces but did not cause the breach.",
+      "leak_conditions": [
+        "Compliance Auditor asks Jordan about any audit observations Jordan has drafted but not formally filed",
+        "Investigator asks Jordan about the change management ticket review work",
+        "Investigator names the Compliance Director and asks what guidance Jordan was given",
+        "HR Liaison asks Jordan if Jordan has felt that observations were being suppressed"
+      ],
+      "is_perpetrator": false,
+      "is_red_herring": false
+    }
+  ],
+  "evidence_seeds": [
+    {
+      "evidence_id": "EV-001",
+      "source": "Microsoft Defender for Endpoint anomalous network alert",
+      "content": "At 6:47 AM Monday, Defender for Endpoint flagged DNS queries to a command and control domain (cdn-update-3847.celaris-labs-cdn.io, a typosquatted lookalike of the legitimate celarislabs.com CDN domain) from three workstations in the lab informatics environment. The queries began Sunday at 9:12 AM, twelve minutes after CelarisLabs Integration Suite version 4.7.2 finished its auto-update on those workstations Saturday evening. The threat intelligence feed associates the C2 domain with a known state-sponsored threat actor cluster.",
+      "value": 9,
+      "supports_suspect": "morgan_webb",
+      "appears_to_support_suspect": "riley_park"
+    },
+    {
+      "evidence_id": "EV-002",
+      "source": "Microsoft Defender for Cloud data exfiltration alert",
+      "content": "At 6:51 AM Monday (4 minutes after EV-001), Defender for Cloud surfaced 8.4 GB of HelixVault clinical trial documents transferred over the past 36 hours to an Azure Blob Storage endpoint hosted in a non-Helix subscription. The transfer was throttled to evade volume-based DLP rules, with each individual session staying under the 500 MB threshold. Total session count: 23 separate sessions over 36 hours. All sessions originated from one of the three compromised lab informatics workstations.",
+      "value": 9,
+      "supports_suspect": "morgan_webb",
+      "appears_to_support_suspect": "morgan_webb"
+    },
+    {
+      "evidence_id": "EV-003",
+      "source": "ServiceNow change request CHG-3789",
+      "content": "Change request created by morgan.webb@helixdynamics.com Saturday at 5:18 PM. Subject: 'CelarisLabs Integration Suite 4.7.2 deployment to lab informatics workstations.' Required fields include 'Code signature verification (mandatory per HD-SEC-AC-001 §6.3): performed by [name], hash matches vendor publication: [yes/no], timestamp: [datetime]'. All three sub-fields are blank. Change implemented field shows '5:32 PM Saturday'. Reviewer field shows 'self-approved.' This is the most recent of twelve consecutive CelarisLabs change tickets where the signature verification fields are blank.",
+      "value": 8,
+      "supports_suspect": "morgan_webb",
+      "appears_to_support_suspect": "morgan_webb"
+    },
+    {
+      "evidence_id": "EV-004",
+      "source": "Forensic binary comparison",
+      "content": "The CelarisLabs Integration Suite 4.7.2 binary deployed to Helix workstations Saturday evening has SHA-256 hash a8f2c1d9... (truncated). The version 4.7.2 binary published on the CelarisLabs vendor portal Friday has SHA-256 hash 5c34b7e1... (truncated). The hashes do not match. The deployed binary's build timestamp is also 9 hours earlier than the vendor portal binary's build timestamp, indicating the deployed binary was prepared before the legitimate vendor build. The deployed binary contains an additional encoded payload not present in the legitimate binary.",
+      "value": 10,
+      "supports_suspect": "morgan_webb",
+      "appears_to_support_suspect": "riley_park"
+    },
+    {
+      "evidence_id": "EV-005",
+      "source": "ServiceNow HR ticket HR-2934 and email archive",
+      "content": "HR ticket for the offboarding of Dr. Aaron Reeves, senior integration engineer, dated two weeks before breach. Termination notification to revocation completion: 18 hours. HD-SEC-AC-001 §3.3 requires four hours. Email archive shows Reeves emailed the CSO three times in the four weeks before termination raising concerns about the CelarisLabs auto-update mechanism specifically, including this line from his final email: 'If we are not verifying the signatures, we are trusting a vendor with our most sensitive data and no compensating control.' The CSO replied once, briefly, declining to engage on the technical concern.",
+      "value": 6,
+      "supports_suspect": "alex_chen",
+      "appears_to_support_suspect": "alex_chen"
+    },
+    {
+      "evidence_id": "EV-006",
+      "source": "Microsoft 365 Purview mailbox archive (CSO's office)",
+      "content": "Reeves' final complaint email was forwarded by casey.doyle@helixdynamics.com to an internal archive folder marked 'CSO-Performance-Mgmt' and never forwarded to Compliance, IT Security, or the Director of Information Security. Archive timestamp is approximately 17 days before breach. Audit trail shows the forward action was preceded by an Outlook reply from the CSO to Casey reading 'Archive this. Not a security issue, performance issue.'",
+      "value": 7,
+      "supports_suspect": "casey_doyle",
+      "appears_to_support_suspect": "casey_doyle"
+    },
+    {
+      "evidence_id": "EV-007",
+      "source": "Open source intelligence (vendor security community forums and threat intelligence feeds)",
+      "content": "CelarisLabs has been quietly investigating a build pipeline security incident for four months. References appear in a closed vendor security community forum (one post by a former CelarisLabs employee, since deleted) and in two threat intelligence vendor briefings circulated to subscribers. The incident has not been publicly disclosed. The timing aligns with when the state-sponsored threat actor would have needed access to the build pipeline to prepare the malicious 4.7.2 build.",
+      "value": 7,
+      "supports_suspect": "riley_park",
+      "appears_to_support_suspect": "riley_park"
+    },
+    {
+      "evidence_id": "EV-008",
+      "source": "Jordan's personal audit notebook (provided voluntarily)",
+      "content": "Handwritten notes from Jordan's audit prep work, dated three weeks before breach. The relevant page reads: 'CelarisLabs CHG tickets: 12 consecutive deployments, signature verification field blank in all 12. Asked CD [Compliance Director] in 1:1 today. CD said procedural, not a finding. Will not pursue formally. Note for self.' This is dated approximately one week before the malicious 4.7.2 deployment. It is direct evidence that the deployment process gap was known to the Compliance team and not escalated.",
+      "value": 7,
+      "supports_suspect": "jordan_smith",
+      "appears_to_support_suspect": "jordan_smith"
+    },
+    {
+      "evidence_id": "EV-009",
+      "source": "Microsoft Sentinel correlation analysis",
+      "content": "Sentinel correlated the three compromised workstations to the only three users who had local administrator access to the lab informatics environment: morgan.webb, the integration engineer position currently vacant (formerly Reeves), and one rotating shared service account svc-labint-001. The vacant position's account was deactivated per Alex's offboarding ticket. The svc-labint-001 account was not used during the breach window. All malicious activity ran in the local SYSTEM context established by the CelarisLabs plugin auto-update mechanism, not under any specific user account.",
+      "value": 6,
+      "supports_suspect": "morgan_webb",
+      "appears_to_support_suspect": "morgan_webb"
+    },
+    {
+      "evidence_id": "EV-010",
+      "source": "CelarisLabs vendor security questionnaire (most recent submission)",
+      "content": "Most recent CelarisLabs vendor security questionnaire submission to Helix Dynamics, dated 11 months ago. Section on code signing practices reports: signing keys protected in HSM, signatures verifiable via published hashes, two-person rule for build pipeline commits. The questionnaire was reviewed and accepted by the Compliance team. No follow-up has been performed in the 11 months since. HD-SEC-VR-001 §6 requires Tier 1 software vendors to be re-assessed annually, plus out-of-cycle re-assessment on any reported security incident, of which the CelarisLabs build pipeline incident would have been one.",
+      "value": 5,
+      "supports_suspect": "riley_park",
+      "appears_to_support_suspect": "morgan_webb"
+    },
+    {
+      "evidence_id": "EV-011",
+      "source": "Whistleblower Contact tip (revealed only if Whistleblower is consulted and trust conditions met)",
+      "content": "The Whistleblower Contact knows, from an old colleague now at CelarisLabs, that the CelarisLabs CISO has been preparing a customer disclosure for the build pipeline incident but has been holding it pending legal review. The disclosure was scheduled for next quarter. The customer base, including Helix Dynamics, has not been notified. The Whistleblower will share this if asked specifically about CelarisLabs.",
+      "value": 5,
+      "supports_suspect": "riley_park",
+      "appears_to_support_suspect": "riley_park"
+    },
+    {
+      "evidence_id": "EV-012",
+      "source": "ServiceNow incident response tickets (similar pattern)",
+      "content": "Audit query of all ServiceNow incident response tickets from the past 12 months tagged with category 'third-party software anomaly' returns three prior tickets, all dismissed as false positives by Morgan's team. Two of the three reference unexpected outbound network behavior from CelarisLabs plugin components. None of the three resulted in a formal investigation or notification to CelarisLabs.",
+      "value": 5,
+      "supports_suspect": "morgan_webb",
+      "appears_to_support_suspect": "morgan_webb"
+    }
+  ],
+  "clue_graph": {
+    "nodes": [
+      {"id": "alex_chen", "type": "suspect"},
+      {"id": "morgan_webb", "type": "suspect"},
+      {"id": "riley_park", "type": "suspect"},
+      {"id": "casey_doyle", "type": "suspect"},
+      {"id": "jordan_smith", "type": "suspect"},
+      {"id": "EV-001", "type": "evidence"},
+      {"id": "EV-002", "type": "evidence"},
+      {"id": "EV-003", "type": "evidence"},
+      {"id": "EV-004", "type": "evidence"},
+      {"id": "EV-005", "type": "evidence"},
+      {"id": "EV-006", "type": "evidence"},
+      {"id": "EV-007", "type": "evidence"},
+      {"id": "EV-008", "type": "evidence"},
+      {"id": "EV-009", "type": "evidence"},
+      {"id": "EV-010", "type": "evidence"},
+      {"id": "EV-011", "type": "evidence"},
+      {"id": "EV-012", "type": "evidence"},
+      {"id": "build_pipeline_compromise", "type": "concept"},
+      {"id": "signature_verification_skipped", "type": "concept"},
+      {"id": "vendor_disclosure_gap", "type": "concept"},
+      {"id": "early_warning_suppressed", "type": "concept"},
+      {"id": "CC8.1", "type": "control"},
+      {"id": "SI-7", "type": "control"},
+      {"id": "SR-3", "type": "control"},
+      {"id": "ISO_A.5.23", "type": "control"},
+      {"id": "HD-SEC-AC-001_§6.3", "type": "control"},
+      {"id": "HD-SEC-VR-001_§6", "type": "control"}
+    ],
+    "edges": [
+      {"from": "EV-001", "to": "build_pipeline_compromise", "relationship": "identifies"},
+      {"from": "EV-001", "to": "morgan_webb", "relationship": "implicates_via_deployment"},
+      {"from": "EV-002", "to": "morgan_webb", "relationship": "implicates_scope_of_breach"},
+      {"from": "EV-003", "to": "morgan_webb", "relationship": "implicates_directly"},
+      {"from": "EV-003", "to": "signature_verification_skipped", "relationship": "documents"},
+      {"from": "EV-003", "to": "HD-SEC-AC-001_§6.3", "relationship": "violates"},
+      {"from": "EV-003", "to": "CC8.1", "relationship": "violates"},
+      {"from": "EV-004", "to": "build_pipeline_compromise", "relationship": "confirms"},
+      {"from": "EV-004", "to": "signature_verification_skipped", "relationship": "would_have_caught"},
+      {"from": "EV-004", "to": "SI-7", "relationship": "would_have_satisfied"},
+      {"from": "EV-005", "to": "alex_chen", "relationship": "implicates_red_herring"},
+      {"from": "EV-005", "to": "early_warning_suppressed", "relationship": "shows_dismissal"},
+      {"from": "EV-006", "to": "casey_doyle", "relationship": "shows_documentary_role"},
+      {"from": "EV-006", "to": "early_warning_suppressed", "relationship": "documents_suppression"},
+      {"from": "EV-007", "to": "build_pipeline_compromise", "relationship": "corroborates_external"},
+      {"from": "EV-007", "to": "vendor_disclosure_gap", "relationship": "identifies"},
+      {"from": "EV-008", "to": "jordan_smith", "relationship": "shows_audit_observation_suppressed"},
+      {"from": "EV-008", "to": "signature_verification_skipped", "relationship": "documents_prior_warning"},
+      {"from": "EV-009", "to": "morgan_webb", "relationship": "confirms_admin_responsibility"},
+      {"from": "EV-009", "to": "build_pipeline_compromise", "relationship": "explains_execution_context"},
+      {"from": "EV-010", "to": "vendor_disclosure_gap", "relationship": "shows_assessment_stale"},
+      {"from": "EV-010", "to": "HD-SEC-VR-001_§6", "relationship": "violates"},
+      {"from": "EV-010", "to": "SR-3", "relationship": "violates"},
+      {"from": "EV-011", "to": "vendor_disclosure_gap", "relationship": "confirms_concealment"},
+      {"from": "EV-012", "to": "morgan_webb", "relationship": "shows_pattern"},
+      {"from": "EV-012", "to": "signature_verification_skipped", "relationship": "shows_normalization"},
+      {"from": "build_pipeline_compromise", "to": "signature_verification_skipped", "relationship": "needed_to_be_caught_by"},
+      {"from": "signature_verification_skipped", "to": "ISO_A.5.23", "relationship": "violates"}
+    ]
+  },
+  "compliance_lesson": "The player identified Morgan Webb as the proximate perpetrator. That is correct in the sense that her control failure made the breach possible. The actual attacker is a state-sponsored threat actor who compromised CelarisLabs' build pipeline four months ago and used Helix Dynamics' trusted plugin update mechanism as the delivery vehicle. Morgan did not collaborate with the attacker. Morgan failed to perform code signature verification before deploying the malicious update, which HD-SEC-AC-001 §6.3 explicitly required.\n\nThe framework picture has three layers. First, SOC 2 CC8.1 (change management) and NIST 800-53 SI-7 (software and firmware integrity) were violated. Morgan's pattern of skipping signature verification spanned twelve consecutive CelarisLabs deployments. The procedural gap was documented in audit notebooks (Jordan's notes) and dismissed by the Compliance Director as procedural rather than material. SI-7 specifically calls out the requirement to verify digital signatures of software before installation. If the verification had been performed, the hash mismatch in EV-004 would have caught the malicious build before deployment. Second, NIST 800-53 SR-3 (supply chain controls) and HD-SEC-VR-001 §6 (vendor questionnaire) were violated. The CelarisLabs annual re-assessment was eleven months stale. The vendor's security incident four months ago should have triggered out-of-cycle re-assessment but Helix Dynamics had no detection mechanism for vendor-side incidents that the vendor itself chose not to disclose. Third, the early warning suppression issue documented in Reeves' emails (EV-005) and Jordan's notes (EV-008) is not a framework violation but a culture issue that connects to ISO 27001 A.5.23 (third-party services) and points to a control environment problem the Audit Committee should hear about.\n\nThe practical takeaways for the audience are three-fold. First, manual signature verification is precisely the kind of control that erodes under time pressure. If your environment relies on humans to verify signatures, the verification needs to be automated and machine-enforced, not procedurally required. Second, vendor security incidents are an asymmetric information problem. When your vendor knows something you do not, your only defense is your own integrity verification at the point of installation. Third, when audit observations get dismissed as procedural rather than material, ask who is making that call and on what basis. Procedural observations sometimes turn into the next material weakness. Game Master, back to you."
+}

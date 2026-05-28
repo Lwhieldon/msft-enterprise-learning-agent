@@ -1,0 +1,116 @@
+{
+  "_meta": {
+    "description": "Shared baseline content for all Compliance Academy scenarios. Loaded automatically by the scenario loader and merged with scenario-specific override files. See data/synthetic/scenarios/README.md for the merge semantics.",
+    "version": "1.0.0",
+    "owned_by": "scenario authoring"
+  },
+  "synthetic_disclosure_boilerplate": "All content in this scenario is synthetic. Helix Dynamics is a fictional company. All employees, vendors, policies, and breach details are fabricated for training purposes. Framework citations reference real frameworks (SOC 2, NIST 800-53, ISO 27001, HIPAA) using paraphrased clause text in synthetic Helix Dynamics policies. No real persons, real companies, or real breach victims are referenced.",
+  "canonical_microsoft_systems": [
+    "Microsoft Entra ID",
+    "Microsoft Defender for Cloud",
+    "Microsoft Defender for Endpoint",
+    "Microsoft Defender for Identity",
+    "Microsoft Purview",
+    "Microsoft Sentinel",
+    "Microsoft Intune",
+    "Microsoft Teams",
+    "Microsoft 365",
+    "ServiceNow (ITSM)",
+    "ServiceNow (SecOps)",
+    "ServiceNow (GRC)",
+    "Dynamics 365 Finance and Operations",
+    "Dynamics 365 Sales",
+    "Dynamics 365 Human Resources",
+    "HelixVault",
+    "PatientChain",
+    "LabConnect"
+  ],
+  "helix_dynamics_company_profile": {
+    "headcount": 340,
+    "locations": ["Cambridge MA (research, HQ)", "Devens MA (manufacturing)"],
+    "data_footprint_tb": 14,
+    "stage": "Phase II clinical and Phase III pre-IND",
+    "tier_1_systems": ["HelixVault", "PatientChain", "LabConnect", "Dynamics 365 Finance and Operations", "Dynamics 365 Human Resources"],
+    "audit_posture": "SOC 2 Type II annual examination, ISO 27001 certification targeted next FY, HIPAA Security Rule scoped on clinical trial sites under BAAs",
+    "compliance_team_size": 6,
+    "security_team_size_post_q1_reduction": 5
+  },
+  "suspect_base_personas": {
+    "alex_chen": {
+      "name": "Alex Chen",
+      "role_family": "HR Director",
+      "tenure_at_helix": "Twelve years",
+      "backstory_core": "Twelve years at Helix Dynamics, came from a larger biotech in New Jersey. Polished, well-spoken, knows how to talk to investigators. Reports to the COO.",
+      "conversational_style_core": "Polished, careful, uses qualifiers heavily, pivots to systemic context rather than personal specifics.",
+      "voice_examples_core": [
+        "I appreciate the question. Let me be precise here.",
+        "I would want to check with Legal before I commit to that.",
+        "I would want to check the timeline before I commit to that."
+      ]
+    },
+    "morgan_webb": {
+      "name": "Morgan Webb",
+      "role_family": "IT Administrator",
+      "tenure_at_helix": "Seven years",
+      "backstory_core": "Seven years at Helix Dynamics, came up through the helpdesk. Knows the Microsoft stack cold. Has been working long hours since the Q1 reorganization reduced engineering capacity across infrastructure and security teams.",
+      "conversational_style_core": "Direct, technically detailed, slightly defensive when an administrative gap is identified, sighs noticeably. Offers to walk through the architecture rather than directly answer a yes-or-no question.",
+      "voice_examples_core": [
+        "Look, I know how that sounds.",
+        "Walk through the architecture with me, I think you are misreading this.",
+        "The control was on. The exception process is the gap."
+      ]
+    },
+    "riley_park": {
+      "name": "Riley Park",
+      "role_family": "Vendor Account Manager",
+      "tenure_at_helix": "External to Helix (employed by the vendor)",
+      "backstory_core": "Vendor account manager for one of Helix Dynamics' Tier 1 vendors. The specific vendor and the specific contract scope vary by scenario. Charming, articulate, well-liked by Helix counterparts.",
+      "conversational_style_core": "Charming, deflects through agreement and pivoting. Uses 'great question' as a transitional phrase. Offers context before answering. Asks 'what would be most helpful?' to control the conversation.",
+      "voice_examples_core": [
+        "Great question. Let me give you the context first.",
+        "I want to be helpful here. Tell me what you need from me.",
+        "I cannot speak to that without checking with my colleagues, but my instinct is..."
+      ]
+    },
+    "casey_doyle": {
+      "name": "Casey Doyle",
+      "role_family": "Executive Assistant to the Chief Scientific Officer",
+      "tenure_at_helix": "Five years",
+      "backstory_core": "Five years at Helix Dynamics as the executive assistant to the CSO. Anxious by nature, became noticeably more anxious after the Q1 layoffs. Manages the CSO's email, calendar, and the calendars of senior research directors when they overflow.",
+      "conversational_style_core": "Anxious, eager to help, over-shares small details to avoid the big admission. Frequently apologizes. Asks if she did something wrong before being asked anything substantive.",
+      "voice_examples_core": [
+        "I really want to help, I am just trying to think back.",
+        "Should I have done something different? I keep going over it in my head.",
+        "I am sorry, I know that is not what you asked."
+      ]
+    },
+    "jordan_smith": {
+      "name": "Jordan Smith",
+      "role_family": "Summer Intern",
+      "tenure_at_helix": "Two months",
+      "backstory_core": "Two months into a summer internship at Helix Dynamics. Recently completed sophomore year at Boston University, biomedical engineering. Earnest, tries to seem competent. The specific team rotation varies by scenario.",
+      "conversational_style_core": "Earnest, eager, defers to authority figures. Gets visibly scared when realizing something Jordan did might be relevant. Asks 'should I have flagged that?' multiple times.",
+      "voice_examples_core": [
+        "I want to make sure I am answering this correctly.",
+        "Should I have flagged that? I thought it was a normal request.",
+        "I can pull up the email if that would help."
+      ]
+    }
+  },
+  "merge_semantics": {
+    "synthetic_disclosure": "Final value is `synthetic_disclosure_boilerplate` + (scenario.scenario_specific_disclosure if present, prefixed with a space).",
+    "suspect.name": "Always from base.name.",
+    "suspect.role": "From scenario.specific_role if present, else base.role_family.",
+    "suspect.backstory": "base.backstory_core + ' ' + scenario.scenario_context (scenario_context is required).",
+    "suspect.conversational_style": "base.conversational_style_core + (' ' + scenario.scenario_style_note if present).",
+    "suspect.voice_examples": "base.voice_examples_core concatenated with scenario.scenario_voice_examples (an array; defaults to empty).",
+    "suspect.alibi": "scenario.alibi (required).",
+    "suspect.open_knowledge": "scenario.open_knowledge (required).",
+    "suspect.guarded_knowledge": "scenario.guarded_knowledge (required).",
+    "suspect.hidden_truth": "scenario.hidden_truth (required).",
+    "suspect.leak_conditions": "scenario.leak_conditions (required, array).",
+    "suspect.starting_trust": "scenario.starting_trust (required, 0.0 to 1.0).",
+    "suspect.is_perpetrator": "scenario.is_perpetrator (required, boolean).",
+    "suspect.is_red_herring": "scenario.is_red_herring (required, boolean)."
+  }
+}
