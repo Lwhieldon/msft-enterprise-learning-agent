@@ -98,6 +98,7 @@ from src.scenario_loader import (
     ScenarioValidationError,
     load_scenario_from_dict,
 )
+from src.activity_log import emit as _emit, log_line as _log_line
 from src.agents._azure_client import (
     AgentClientError,
     build_azure_client,
@@ -375,6 +376,18 @@ def generate_scenario(
     if not breach_description or not breach_description.strip():
         raise ScenarioGenerationError("breach_description must be a non-empty string")
 
+    # Visual separator + scope header for this generation in the activity log.
+    _log_line("")
+    _breach_preview = (
+        breach_description if len(breach_description) < 100
+        else breach_description[:97] + "..."
+    )
+    _emit(
+        "Scenario",
+        "Scenario Generator: beginning live generation",
+        breach=_breach_preview,
+    )
+
     deployment = resolve_deployment(
         deployment,
         "SCENARIO_GENERATOR_DEPLOYMENT",
@@ -387,7 +400,13 @@ def generate_scenario(
         client = build_azure_client()
         system_prompt = load_prompt(PROMPT_PATH)
     except AgentClientError as exc:
+        _emit("Error", f"Client/prompt setup failed: {exc}")
         raise ScenarioGenerationError(str(exc)) from exc
+    _emit(
+        "Scenario",
+        f"Loaded system prompt ({len(system_prompt)} chars)",
+        path=PROMPT_PATH.name,
+    )
     user_message = _build_user_message(breach_description)
 
     # Outer loop: validation retry. Each iteration runs a full streaming
@@ -398,6 +417,12 @@ def generate_scenario(
     total_attempts = 0
 
     for validation_attempt in range(max_validation_retries + 1):
+        if validation_attempt > 0:
+            _emit(
+                "Scenario",
+                f"Validation retry cycle "
+                f"({validation_attempt}/{max_validation_retries})",
+            )
         # Streaming loop with retry on content_filter. Each attempt starts
         # fresh state so partial output from an aborted attempt doesn't
         # contaminate the next one.
@@ -409,16 +434,28 @@ def generate_scenario(
         for attempt in range(max_retries + 1):
             cf_attempts = attempt + 1
             is_retry = attempt > 0
-            if is_retry and stream_to_stdout:
-                sys.stdout.write(
-                    f"\n[Azure content filter triggered, retrying "
-                    f"({attempt}/{max_retries})...]\n"
+            if is_retry:
+                _emit(
+                    "Scenario",
+                    f"Retrying after content filter ({attempt}/{max_retries})",
                 )
-                sys.stdout.flush()
+                if stream_to_stdout:
+                    sys.stdout.write(
+                        f"\n[Azure content filter triggered, retrying "
+                        f"({attempt}/{max_retries})...]\n"
+                    )
+                    sys.stdout.flush()
 
+            _emit(
+                "Azure OpenAI",
+                f"POST {deployment}",
+                max_tokens=max_tokens,
+                temp=temperature,
+            )
             start = time.monotonic()
             parts: list[str] = []
             finish_reason = None
+            first_token_time: float | None = None
 
             try:
                 stream = client.chat.completions.create(
@@ -442,11 +479,25 @@ def generate_scenario(
                     content = getattr(choice.delta, "content", None)
                     if not content:
                         continue
+                    if first_token_time is None:
+                        first_token_time = time.monotonic()
+                        first_token_ms = int(
+                            (first_token_time - start) * 1000
+                        )
+                        _emit(
+                            "Azure OpenAI",
+                            f"First token in {first_token_ms}ms",
+                        )
                     parts.append(content)
                     if stream_to_stdout:
                         sys.stdout.write(content)
                         sys.stdout.flush()
             except Exception as exc:
+                _emit(
+                    "Error",
+                    f"Azure OpenAI request failed: {exc}",
+                    deployment=deployment,
+                )
                 raise ScenarioGenerationError(
                     f"Azure OpenAI request to deployment '{deployment}' failed: {exc}"
                 ) from exc
@@ -457,6 +508,12 @@ def generate_scenario(
 
             elapsed = time.monotonic() - start
             raw_response = "".join(parts)
+            approx_tokens = len(raw_response) // 4
+            _emit(
+                "Azure OpenAI",
+                f"Stream complete: ~{approx_tokens} tokens in {elapsed:.1f}s",
+                finish_reason=finish_reason or "unknown",
+            )
 
             # Retry only on content_filter, only if budget remains.
             if finish_reason == "content_filter" and attempt < max_retries:
@@ -530,6 +587,15 @@ def generate_scenario(
             # user message and loop. Each retry feeds the specific validation
             # error back to the model as explicit guidance.
             if validation_attempt < max_validation_retries:
+                _emit(
+                    "Scenario",
+                    f"Validation FAILED: {str(exc)[:160]}",
+                )
+                _emit(
+                    "Scenario",
+                    f"Building corrective retry message "
+                    f"({validation_attempt + 1}/{max_validation_retries})",
+                )
                 if stream_to_stdout:
                     sys.stdout.write(
                         f"\n[Validation failed: {exc}]\n"
@@ -553,6 +619,10 @@ def generate_scenario(
                 parsed_json=scenario_override,
                 dump_path=debug_dump_path,
             )
+            _emit(
+                "Error",
+                f"Validation retries exhausted ({total_attempts} model calls)",
+            )
             raise ScenarioValidationError(
                 f"{exc}\nValidation retries exhausted "
                 f"({validation_attempt + 1} validation attempt(s), "
@@ -562,6 +632,24 @@ def generate_scenario(
 
         # SUCCESS path. Build reasoning summary and return.
         reasoning_summary = _extract_reasoning_summary(raw_response)
+
+        scn = merged_scenario
+        perp_name = next(
+            (s["name"] for s in scn["suspects"] if s.get("is_perpetrator")),
+            "?",
+        )
+        _emit(
+            "Scenario",
+            f"Scenario validated and merged: {scn['scenario_name']!r}",
+            id=scn["scenario_id"],
+            pattern=scn["attack_pattern_category"],
+            evidence=len(scn["evidence_seeds"]),
+            controls=len(scn["violated_controls"]),
+            perpetrator=perp_name,
+            elapsed=f"{elapsed:.1f}s",
+            validation_attempts=validation_attempt + 1,
+            total_calls=total_attempts,
+        )
 
         return {
             "merged_scenario": merged_scenario,

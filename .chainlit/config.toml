@@ -1,0 +1,94 @@
+# Chainlit configuration for Compliance Academy.
+#
+# This file controls the visual identity and feature flags for the
+# chat UI. Brand theming (colors, fonts) is applied via the custom CSS
+# at .chainlit/public/stylesheet.css; brand assets (logos, avatars,
+# favicon) are served from .chainlit/public/.
+#
+# Docs: https://docs.chainlit.io/backend/config/overview
+
+[project]
+# This is what shows in the browser tab title and the welcome screen.
+# Intentionally on-brand, not "My Chainlit App".
+name = "Compliance Academy"
+
+# Disable cloud telemetry/auth. This is an on-prem demo; nothing leaves
+# the local machine.
+enable_telemetry = false
+
+# How long a Chainlit session is kept alive between page refreshes. The
+# demo is short (~15 min on stream), so the default 30 days is fine.
+session_timeout = 3600
+
+# We use Python imports for our agent modules.
+# Pure-Python project, no React frontend customizations.
+allow_origins = ["*"]
+
+[features]
+# Enable streaming responses so token deltas render live in the chat
+# bubble as the model emits them.
+unsafe_allow_html = false
+latex = false
+auto_tag_thread = false
+
+# We do not use Chainlit's built-in file uploads; the demo runs against
+# fixed scenario JSON. Disabling reduces UI noise.
+[features.spontaneous_file_upload]
+enabled = false
+
+# Show timing breakdown for each agent message (useful while testing;
+# can be disabled before stream if it competes with the activity log).
+[features.mcp]
+enabled = false
+
+[UI]
+# Title shown in the header.
+name = "Compliance Academy"
+
+# Description shown in the welcome screen (chainlit.md provides richer
+# welcome text). Keep this short so the header stays clean.
+description = "SC&H Group | Multi-agent compliance training on Microsoft Foundry"
+
+# Default to the dark theme to make the SC&H Deep Navy + Bright Blue
+# scheme pop on stream. Users can toggle to light if they want.
+default_theme = "dark"
+
+# Override the default theme palette via custom CSS. The CSS file
+# defines all SC&H brand variables on :root and applies them to the
+# Chainlit component selectors.
+custom_css = "/public/stylesheet.css"
+
+# Google Fonts: pulled in via custom_font URL so we don't need to
+# bundle the .ttf files into the build. Rubik (headings) and Libre
+# Franklin (body) per the SC&H brand guidelines.
+custom_font = "https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&family=Libre+Franklin:wght@400;500;700&display=swap"
+
+# Hide the "Built with Chainlit" footer. The audience should see
+# Compliance Academy, not the framework brand.
+hide_cot = false
+cot = "tool_call"
+
+[UI.theme.light]
+background = "#FFFFFF"
+paper = "#F2F8FF"
+[UI.theme.light.primary]
+main = "#0079FF"
+dark = "#001864"
+light = "#00B7FF"
+[UI.theme.light.text]
+primary = "#001864"
+secondary = "#707070"
+
+[UI.theme.dark]
+background = "#001864"
+paper = "#002E68"
+[UI.theme.dark.primary]
+main = "#0079FF"
+dark = "#001864"
+light = "#41EFAF"
+[UI.theme.dark.text]
+primary = "#FFFFFF"
+secondary = "#CEFDFF"
+
+[meta]
+generated_by = "Compliance Academy build"

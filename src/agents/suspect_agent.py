@@ -67,6 +67,7 @@ from src.agents._azure_client import (
     load_prompt,
     resolve_deployment,
 )
+from src.activity_log import emit as _emit, log_line as _log_line
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -258,6 +259,20 @@ def interrogate_suspect(
 
     suspect = _find_suspect(scenario, suspect_id)
 
+    # Visual separator + scope header for this interrogation in the activity log.
+    _log_line("")
+    _question_preview = (
+        player_message if len(player_message) < 100
+        else player_message[:97] + "..."
+    )
+    _emit(
+        "Agent",
+        f"Interrogating {suspect.get('name', suspect_id)}",
+        scenario=scenario.get("scenario_id", "?"),
+        suspect=suspect_id,
+        question=_question_preview,
+    )
+
     deployment = resolve_deployment(
         deployment,
         "SUSPECT_AGENT_DEPLOYMENT",
@@ -269,9 +284,16 @@ def interrogate_suspect(
         client = build_azure_client()
         template = load_prompt(TEMPLATE_PATH)
     except AgentClientError as exc:
+        _emit("Error", f"Client/template setup failed: {exc}")
         raise SuspectAgentError(str(exc)) from exc
 
     system_prompt = _build_system_prompt(template, suspect, scenario)
+    _emit(
+        "Agent",
+        f"Built persona-specific system prompt ({len(system_prompt)} chars)",
+        template=TEMPLATE_PATH.name,
+        persona=suspect.get("name", suspect_id),
+    )
 
     # Build the messages list: system + prior history + new player message.
     messages: list[dict[str, str]] = [{"role": "system", "content": system_prompt}]
@@ -288,16 +310,28 @@ def interrogate_suspect(
     for attempt in range(max_retries + 1):
         attempts = attempt + 1
         is_retry = attempt > 0
-        if is_retry and stream_to_stdout:
-            sys.stdout.write(
-                f"\n[Azure content filter triggered, retrying "
-                f"({attempt}/{max_retries})...]\n"
+        if is_retry:
+            _emit(
+                "Agent",
+                f"Retrying after content filter ({attempt}/{max_retries})",
             )
-            sys.stdout.flush()
+            if stream_to_stdout:
+                sys.stdout.write(
+                    f"\n[Azure content filter triggered, retrying "
+                    f"({attempt}/{max_retries})...]\n"
+                )
+                sys.stdout.flush()
 
+        _emit(
+            "Azure OpenAI",
+            f"POST {deployment}",
+            max_tokens=max_tokens,
+            temp=temperature,
+        )
         start = time.monotonic()
         parts: list[str] = []
         finish_reason = None
+        first_token_time: float | None = None
 
         try:
             stream = client.chat.completions.create(
@@ -317,11 +351,25 @@ def interrogate_suspect(
                 content = getattr(choice.delta, "content", None)
                 if not content:
                     continue
+                if first_token_time is None:
+                    first_token_time = time.monotonic()
+                    first_token_ms = int(
+                        (first_token_time - start) * 1000
+                    )
+                    _emit(
+                        "Azure OpenAI",
+                        f"First token in {first_token_ms}ms",
+                    )
                 parts.append(content)
                 if stream_to_stdout:
                     sys.stdout.write(content)
                     sys.stdout.flush()
         except Exception as exc:
+            _emit(
+                "Error",
+                f"Azure OpenAI request failed: {exc}",
+                deployment=deployment,
+            )
             raise SuspectAgentError(
                 f"Azure OpenAI request to deployment '{deployment}' failed: {exc}"
             ) from exc
@@ -332,6 +380,12 @@ def interrogate_suspect(
 
         elapsed = time.monotonic() - start
         reply_text = "".join(parts)
+        approx_tokens = len(reply_text) // 4
+        _emit(
+            "Azure OpenAI",
+            f"Stream complete: ~{approx_tokens} tokens in {elapsed:.1f}s",
+            finish_reason=finish_reason or "unknown",
+        )
 
         if finish_reason == "content_filter" and attempt < max_retries:
             continue
@@ -362,6 +416,12 @@ def interrogate_suspect(
             f"Deployment: {deployment}, elapsed: {elapsed:.1f}s, attempts: {attempts}"
         )
 
+    _emit(
+        "Agent",
+        f"{suspect.get('name', suspect_id)} returned {len(reply_text)} chars",
+        elapsed=f"{elapsed:.1f}s",
+        attempts=attempts,
+    )
     return {
         "reply": reply_text.strip(),
         "suspect_name": suspect.get("name", suspect_id),

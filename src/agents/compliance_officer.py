@@ -78,6 +78,7 @@ from src.agents._search_client import (
     format_retrieved_context,
     retrieve_context,
 )
+from src.activity_log import emit as _emit, log_line as _log_line
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -280,7 +281,7 @@ def _fetch_retrieved_context(
     top_k: int = 5,
     *,
     stream_to_stdout: bool = False,
-) -> tuple[str, int]:
+) -> tuple[str, list[dict[str, Any]]]:
     """Run a Foundry IQ retrieval and format the results.
 
     Wraps ``retrieve_context`` and ``format_retrieved_context`` with
@@ -298,24 +299,56 @@ def _fetch_retrieved_context(
             the caller.
 
     Returns:
-        A tuple of (formatted_context_string, retrieval_count). On any
-        failure (including empty query), returns ("", 0).
+        A tuple of (formatted_context_string, retrievals_list). The list
+        contains the raw retrieval dicts (each with ``source_url``,
+        ``snippet``, ``score`` keys per ``_search_client.retrieve_context``).
+        On any failure (including empty query), returns ("", []).
     """
     if not query.strip():
-        return "", 0
+        return "", []
 
+    # Truncate query in the activity log to keep one-line events readable.
+    query_preview = query if len(query) < 80 else query[:77] + "..."
+    _emit(
+        "Foundry IQ",
+        f'Searching compliance-content-index for: "{query_preview}"',
+        top_k=top_k,
+    )
+
+    search_start = time.monotonic()
     try:
         retrievals = retrieve_context(query, top_k=top_k)
     except SearchClientError as exc:
+        elapsed_ms = int((time.monotonic() - search_start) * 1000)
+        _emit(
+            "Foundry IQ",
+            f"Search FAILED after {elapsed_ms}ms (graceful degradation: "
+            f"agent will use scenario-only context)",
+            error=str(exc)[:200],
+        )
         if stream_to_stdout:
             sys.stdout.write(
                 f"\n[Foundry IQ retrieval unavailable: {exc}. "
                 f"Proceeding with scenario-only context.]\n"
             )
             sys.stdout.flush()
-        return "", 0
+        return "", []
 
-    return format_retrieved_context(retrievals), len(retrievals)
+    elapsed_ms = int((time.monotonic() - search_start) * 1000)
+    count = len(retrievals)
+    _emit(
+        "Foundry IQ",
+        f"Retrieved {count} {'source' if count == 1 else 'sources'} in {elapsed_ms}ms",
+    )
+    for r in retrievals:
+        source_url = r.get("source_url", "")
+        filename = source_url.rsplit("/", 1)[-1] if source_url else "(unknown)"
+        if "?" in filename:
+            filename = filename.split("?", 1)[0]
+        score = r.get("score", 0.0)
+        _emit("Foundry IQ", f"  {filename}", score=f"{score:.2f}")
+
+    return format_retrieved_context(retrievals), retrievals
 
 
 # ---------------------------------------------------------------------------
@@ -379,6 +412,16 @@ def deliver_closer(
             "correct, wrong_perpetrator, no_accusation"
         )
 
+    # Visual separator + scope header for this closer in the activity log.
+    _log_line("")
+    _emit(
+        "Agent",
+        "Compliance Officer: beginning closer",
+        scenario=scenario.get("scenario_id", "?"),
+        outcome=outcome,
+        accused=accused_suspect_id or "(none)",
+    )
+
     deployment = resolve_deployment(
         deployment,
         "COMPLIANCE_OFFICER_DEPLOYMENT",
@@ -390,26 +433,34 @@ def deliver_closer(
         client = build_azure_client()
         system_prompt = load_prompt(PROMPT_PATH)
     except AgentClientError as exc:
+        _emit("Error", f"Client/prompt setup failed: {exc}")
         raise ComplianceOfficerError(str(exc)) from exc
+
+    _emit(
+        "Agent",
+        f"Loaded system prompt ({len(system_prompt)} chars)",
+        path=PROMPT_PATH.name,
+    )
 
     # Foundry IQ retrieval (optional, graceful on failure). Query built
     # from the violated control identifiers since the CO is invoked at
     # scene close, not in response to a free-text question.
     retrieved_context_text = ""
-    retrieval_count = 0
+    retrievals: list[dict[str, Any]] = []
     if enable_retrieval:
         retrieval_query = _build_retrieval_query(scenario)
-        retrieved_context_text, retrieval_count = _fetch_retrieved_context(
+        retrieved_context_text, retrievals = _fetch_retrieved_context(
             retrieval_query,
             top_k=retrieval_top_k,
             stream_to_stdout=stream_to_stdout,
         )
-        if stream_to_stdout and retrieval_count > 0:
+        if stream_to_stdout and len(retrievals) > 0:
             sys.stdout.write(
-                f"[Retrieved {retrieval_count} relevant passages "
+                f"[Retrieved {len(retrievals)} relevant passages "
                 f"from Foundry IQ]\n"
             )
             sys.stdout.flush()
+    retrieval_count = len(retrievals)
 
     user_message = _build_user_message(
         scenario, accused_suspect_id, outcome, retrieved_context_text
@@ -428,16 +479,28 @@ def deliver_closer(
     for attempt in range(max_retries + 1):
         attempts = attempt + 1
         is_retry = attempt > 0
-        if is_retry and stream_to_stdout:
-            sys.stdout.write(
-                f"\n[Azure content filter triggered, retrying "
-                f"({attempt}/{max_retries})...]\n"
+        if is_retry:
+            _emit(
+                "Agent",
+                f"Retrying after content filter ({attempt}/{max_retries})",
             )
-            sys.stdout.flush()
+            if stream_to_stdout:
+                sys.stdout.write(
+                    f"\n[Azure content filter triggered, retrying "
+                    f"({attempt}/{max_retries})...]\n"
+                )
+                sys.stdout.flush()
 
+        _emit(
+            "Azure OpenAI",
+            f"POST {deployment}",
+            max_tokens=max_tokens,
+            temp=temperature,
+        )
         start = time.monotonic()
         parts: list[str] = []
         finish_reason = None
+        first_token_time: float | None = None
 
         try:
             stream = client.chat.completions.create(
@@ -457,6 +520,15 @@ def deliver_closer(
                 content = getattr(choice.delta, "content", None)
                 if not content:
                     continue
+                if first_token_time is None:
+                    first_token_time = time.monotonic()
+                    first_token_ms = int(
+                        (first_token_time - start) * 1000
+                    )
+                    _emit(
+                        "Azure OpenAI",
+                        f"First token in {first_token_ms}ms",
+                    )
                 parts.append(content)
                 if stream_to_stdout:
                     sys.stdout.write(content)
@@ -471,6 +543,11 @@ def deliver_closer(
                 "content_filter" in error_str or "jailbreak" in error_str
             )
             if prompt_filter_triggered and attempt < max_retries:
+                _emit(
+                    "Agent",
+                    f"Prompt filter triggered at request time, retrying "
+                    f"({attempt + 1}/{max_retries})",
+                )
                 if stream_to_stdout:
                     sys.stdout.write(
                         f"\n[Azure prompt filter triggered at request time, "
@@ -479,6 +556,10 @@ def deliver_closer(
                     sys.stdout.flush()
                 continue
             if prompt_filter_triggered:
+                _emit(
+                    "Error",
+                    f"Prompt filter rejected on all attempts: {exc}",
+                )
                 raise ComplianceOfficerError(
                     f"Azure content/jailbreak filter rejected the prompt on all "
                     f"{attempt + 1} attempt(s). The user message construction may "
@@ -486,6 +567,11 @@ def deliver_closer(
                     f"Inspect the user message and remove any meta-references to "
                     f"the system prompt. Original error: {exc}"
                 ) from exc
+            _emit(
+                "Error",
+                f"Azure OpenAI request failed: {exc}",
+                deployment=deployment,
+            )
             raise ComplianceOfficerError(
                 f"Azure OpenAI request to deployment '{deployment}' failed: {exc}"
             ) from exc
@@ -496,6 +582,12 @@ def deliver_closer(
 
         elapsed = time.monotonic() - start
         speech_text = "".join(parts)
+        approx_tokens = len(speech_text) // 4
+        _emit(
+            "Azure OpenAI",
+            f"Stream complete: ~{approx_tokens} tokens in {elapsed:.1f}s",
+            finish_reason=finish_reason or "unknown",
+        )
 
         if finish_reason == "content_filter" and attempt < max_retries:
             continue
@@ -522,6 +614,13 @@ def deliver_closer(
             f"Deployment: {deployment}, elapsed: {elapsed:.1f}s, attempts: {attempts}"
         )
 
+    _emit(
+        "Agent",
+        f"Compliance Officer returned {len(speech_text)} chars",
+        elapsed=f"{elapsed:.1f}s",
+        attempts=attempts,
+        sources=retrieval_count,
+    )
     return {
         "speech": speech_text.strip(),
         "elapsed_seconds": elapsed,
@@ -529,6 +628,7 @@ def deliver_closer(
         "attempts": attempts,
         "outcome": outcome,
         "retrieval_count": retrieval_count,
+        "retrievals": retrievals,
     }
 
 

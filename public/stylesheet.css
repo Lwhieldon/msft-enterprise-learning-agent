@@ -1,0 +1,333 @@
+/* ============================================================================
+   Compliance Academy — SC&H brand stylesheet for Chainlit
+   ============================================================================
+   Applied via .chainlit/config.toml [UI] custom_css. Targets Chainlit's
+   rendered HTML to apply SC&H brand identity: Deep Navy + Bright Blue
+   palette, Rubik + Libre Franklin typography, on-brand chat bubbles and
+   action buttons.
+
+   Chainlit uses a mix of MUI components and custom React, so selectors
+   target both standard MUI classes and Chainlit-specific data attributes.
+   Where Chainlit doesn't expose a stable hook, we use !important to
+   ensure brand colors win the cascade.
+   ============================================================================ */
+
+/* ----------------------------------------------------------------------------
+   SC&H brand variables (per /mnt/skills/user/sch-branding/SKILL.md)
+   ---------------------------------------------------------------------------- */
+:root {
+  /* Primary brand */
+  --sch-navy: #001864;
+  --sch-blue: #0079FF;
+  --sch-white: #FFFFFF;
+
+  /* Accents */
+  --sch-mint: #41EFAF;
+  --sch-ice: #CEFDFF;
+  --sch-teal-dark: #005069;
+  --sch-gold: #FFD833;
+  --sch-sky: #00B7FF;
+  --sch-amber: #FBAE40;
+  --sch-cyan: #0CC5FF;
+
+  /* Backgrounds + text */
+  --sch-gray-light: #E7E6E6;
+  --sch-blue-wash: #F2F8FF;
+  --sch-ice-wash: #EEF4FB;
+  --sch-mid-navy: #002E68;
+  --sch-text-secondary: #707070;
+
+  /* Utilities */
+  --sch-radius: 6px;
+  --sch-radius-lg: 12px;
+  --sch-shadow: 0 2px 8px rgba(0, 24, 100, 0.18);
+  --sch-shadow-lg: 0 4px 20px rgba(0, 24, 100, 0.28);
+
+  /* Override Chainlit's MUI palette tokens where possible */
+  --mui-palette-primary-main: var(--sch-blue);
+  --mui-palette-primary-dark: var(--sch-navy);
+  --mui-palette-primary-light: var(--sch-sky);
+}
+
+/* ----------------------------------------------------------------------------
+   Global: fonts and body background
+   ---------------------------------------------------------------------------- */
+html, body, #root {
+  font-family: "Libre Franklin", "Arial", sans-serif !important;
+}
+
+/* SC&H Deep Navy app background (dark theme) */
+html[data-theme="dark"] body,
+html[data-theme="dark"] #root,
+html.dark body,
+html.dark #root {
+  background-color: var(--sch-navy) !important;
+}
+
+/* Headings use Rubik per brand guide */
+h1, h2, h3, h4, h5, h6,
+[class*="MuiTypography-h"] {
+  font-family: "Rubik", "Arial", sans-serif !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em;
+}
+
+/* ----------------------------------------------------------------------------
+   Header bar (top of app, contains logo + project name)
+   ---------------------------------------------------------------------------- */
+header,
+header[class*="MuiAppBar"],
+[class*="Header"] {
+  background-color: var(--sch-navy) !important;
+  border-bottom: 2px solid var(--sch-blue) !important;
+  box-shadow: var(--sch-shadow) !important;
+}
+
+/* Project name in header */
+header [class*="MuiTypography"],
+header a,
+header span {
+  color: var(--sch-white) !important;
+  font-family: "Rubik", sans-serif !important;
+  font-weight: 500 !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Chat surface (main message area)
+   ---------------------------------------------------------------------------- */
+html[data-theme="dark"] main,
+html[data-theme="dark"] [class*="MuiContainer"],
+html.dark main {
+  background-color: var(--sch-navy) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Assistant messages (agent bubbles)
+   ---------------------------------------------------------------------------- */
+/* The assistant's message body. Chainlit uses .message and step containers. */
+.message,
+[class*="message-content"],
+[data-step-type="run"],
+[class*="MessageBubble"] {
+  font-family: "Libre Franklin", sans-serif !important;
+  line-height: 1.55 !important;
+}
+
+/* Agent name label above the bubble */
+[class*="author-name"],
+[class*="MessageAuthor"],
+.message-author {
+  font-family: "Rubik", sans-serif !important;
+  font-weight: 500 !important;
+  color: var(--sch-ice) !important;
+  font-size: 0.85rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ----------------------------------------------------------------------------
+   User messages (right-aligned pill in light blue)
+   ---------------------------------------------------------------------------- */
+[data-step-type="user_message"] [class*="MuiPaper"],
+[class*="UserMessage"],
+.user-message {
+  background-color: var(--sch-blue) !important;
+  color: var(--sch-white) !important;
+  border-radius: var(--sch-radius-lg) !important;
+  box-shadow: var(--sch-shadow) !important;
+  font-family: "Libre Franklin", sans-serif !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Code blocks and inline code
+   ---------------------------------------------------------------------------- */
+code, pre {
+  font-family: "Consolas", "Cascadia Code", "Courier New", monospace !important;
+}
+
+code:not(pre code) {
+  background-color: var(--sch-mid-navy) !important;
+  color: var(--sch-mint) !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  font-size: 0.9em !important;
+}
+
+pre {
+  background-color: var(--sch-mid-navy) !important;
+  border: 1px solid var(--sch-blue) !important;
+  border-radius: var(--sch-radius) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Input field at the bottom
+   ---------------------------------------------------------------------------- */
+[class*="input-container"],
+[class*="MessageComposer"],
+.MuiInputBase-root,
+form textarea,
+form input[type="text"] {
+  background-color: var(--sch-mid-navy) !important;
+  border: 1px solid var(--sch-blue) !important;
+  border-radius: var(--sch-radius-lg) !important;
+  color: var(--sch-white) !important;
+  font-family: "Libre Franklin", sans-serif !important;
+}
+
+form textarea::placeholder,
+form input::placeholder {
+  color: var(--sch-ice) !important;
+  opacity: 0.6 !important;
+}
+
+/* Send button (the circle arrow icon) */
+[type="submit"] button,
+button[aria-label*="end" i],
+button[type="submit"] {
+  background-color: var(--sch-blue) !important;
+  color: var(--sch-white) !important;
+}
+
+button[type="submit"]:hover,
+[type="submit"]:hover {
+  background-color: var(--sch-sky) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Action buttons (the buttons we attach via cl.Action in later stages)
+   ---------------------------------------------------------------------------- */
+button[class*="action"],
+[class*="action-button"],
+[class*="ActionButton"] {
+  background-color: var(--sch-blue) !important;
+  color: var(--sch-white) !important;
+  font-family: "Rubik", sans-serif !important;
+  font-weight: 500 !important;
+  border: none !important;
+  border-radius: var(--sch-radius) !important;
+  padding: 8px 16px !important;
+  box-shadow: var(--sch-shadow) !important;
+  transition: all 0.15s ease;
+}
+
+button[class*="action"]:hover,
+[class*="ActionButton"]:hover {
+  background-color: var(--sch-sky) !important;
+  box-shadow: var(--sch-shadow-lg) !important;
+  transform: translateY(-1px);
+}
+
+/* ----------------------------------------------------------------------------
+   Source elements (Foundry IQ source attachments in the side panel)
+   ---------------------------------------------------------------------------- */
+[class*="ElementSideView"],
+[class*="element-side"] {
+  background-color: var(--sch-mid-navy) !important;
+  border-left: 3px solid var(--sch-mint) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Links
+   ---------------------------------------------------------------------------- */
+a {
+  color: var(--sch-sky) !important;
+  text-decoration: none;
+  font-weight: 500;
+}
+a:hover {
+  color: var(--sch-mint) !important;
+  text-decoration: underline;
+}
+
+/* ----------------------------------------------------------------------------
+   "Built with Chainlit" + watermark removal
+   ---------------------------------------------------------------------------- */
+[class*="watermark"],
+[class*="Watermark"] {
+  display: none !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Welcome screen (chainlit.md content)
+   ---------------------------------------------------------------------------- */
+[class*="ReadmeWrapper"],
+[class*="readme"] {
+  font-family: "Libre Franklin", sans-serif !important;
+  color: var(--sch-white) !important;
+}
+
+[class*="ReadmeWrapper"] h1,
+[class*="readme"] h1 {
+  color: var(--sch-mint) !important;
+  border-bottom: 2px solid var(--sch-blue);
+  padding-bottom: 8px;
+}
+
+[class*="ReadmeWrapper"] strong,
+[class*="readme"] strong {
+  color: var(--sch-ice) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Avatar sizing — aggressive overrides. Chainlit's MUI defaults set the
+   avatar to ~28px via inline styles or high-specificity classes. We use
+   html-body-rooted selectors and multiple fallback patterns to win the
+   cascade.
+   ---------------------------------------------------------------------------- */
+html body img[src*="/avatars/"],
+html body img[src*="avatar"],
+html body [class*="MuiAvatar"],
+html body [class*="MuiAvatar"] img,
+html body div[class*="avatar"],
+html body div[class*="avatar"] img,
+html body [class*="Avatar"],
+html body [class*="Avatar"] img,
+/* Chainlit 1.3+ uses Tailwind shadcn primitives; the parent <span> has
+   classes "rounded-full h-5 w-5" (20px) that constrain the avatar size.
+   Target the parent span by structural :has() match, plus the img. */
+html body span.rounded-full:has(> img[alt*="Avatar"]),
+html body span:has(> img[src*="/avatars/"]) {
+  width: 56px !important;
+  height: 56px !important;
+  min-width: 56px !important;
+  min-height: 56px !important;
+  max-width: 56px !important;
+  max-height: 56px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+}
+
+/* The wrapper / message row spacing */
+html body [class*="MessageAvatar"],
+html body [class*="message-avatar"],
+html body div:has(> img[src*="/avatars/"]) {
+  width: 56px !important;
+  height: 56px !important;
+  flex-shrink: 0 !important;
+  margin-right: 14px !important;
+}
+
+/* Hide the snake_case author tooltip/label that hovers over the avatar.
+   Real persona labels arrive in Stage 3. */
+[role="tooltip"][class*="author"],
+[role="tooltip"]:has(+ [class*="message-avatar"]),
+[class*="MuiTooltip-popper"] {
+  display: none !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Scrollbar (subtle SC&H tint)
+   ---------------------------------------------------------------------------- */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--sch-mid-navy);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--sch-blue);
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--sch-sky);
+}

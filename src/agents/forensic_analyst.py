@@ -67,6 +67,7 @@ from src.agents._search_client import (
     format_retrieved_context,
     retrieve_context,
 )
+from src.activity_log import emit as _emit, log_line as _log_line
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -216,7 +217,7 @@ def _fetch_retrieved_context(
     top_k: int = 5,
     *,
     stream_to_stdout: bool = False,
-) -> tuple[str, int]:
+) -> tuple[str, list[dict[str, Any]]]:
     """Run a Foundry IQ retrieval and format the results.
 
     Wraps ``retrieve_context`` and ``format_retrieved_context`` with
@@ -234,21 +235,57 @@ def _fetch_retrieved_context(
             the caller (so it appears alongside other agent timing info).
 
     Returns:
-        A tuple of (formatted_context_string, retrieval_count). On any
-        failure, returns ("", 0).
+        A tuple of (formatted_context_string, retrievals_list). The list
+        contains the raw retrieval dicts (each with ``source_url``,
+        ``snippet``, ``score`` keys per ``_search_client.retrieve_context``).
+        On any failure, returns ("", []).
     """
+    # Truncate query in the activity log to keep one-line events readable.
+    query_preview = query if len(query) < 80 else query[:77] + "..."
+    _emit(
+        "Foundry IQ",
+        f'Searching compliance-content-index for: "{query_preview}"',
+        top_k=top_k,
+    )
+
+    search_start = time.monotonic()
     try:
         retrievals = retrieve_context(query, top_k=top_k)
     except SearchClientError as exc:
+        elapsed_ms = int((time.monotonic() - search_start) * 1000)
+        _emit(
+            "Foundry IQ",
+            f"Search FAILED after {elapsed_ms}ms (graceful degradation: "
+            f"agent will use scenario-only context)",
+            error=str(exc)[:200],
+        )
         if stream_to_stdout:
             sys.stdout.write(
                 f"\n[Foundry IQ retrieval unavailable: {exc}. "
                 f"Proceeding with scenario-only context.]\n"
             )
             sys.stdout.flush()
-        return "", 0
+        return "", []
 
-    return format_retrieved_context(retrievals), len(retrievals)
+    elapsed_ms = int((time.monotonic() - search_start) * 1000)
+    count = len(retrievals)
+    _emit(
+        "Foundry IQ",
+        f"Retrieved {count} {'source' if count == 1 else 'sources'} in {elapsed_ms}ms",
+    )
+    # Emit one event per source so the audience can see specific filenames
+    # scrolling by. The indented continuation marker keeps the visual
+    # rhythm grouped with the parent "Retrieved ..." event.
+    for r in retrievals:
+        source_url = r.get("source_url", "")
+        filename = source_url.rsplit("/", 1)[-1] if source_url else "(unknown)"
+        # Strip any query string from the filename
+        if "?" in filename:
+            filename = filename.split("?", 1)[0]
+        score = r.get("score", 0.0)
+        _emit("Foundry IQ", f"  {filename}", score=f"{score:.2f}")
+
+    return format_retrieved_context(retrievals), retrievals
 
 
 # ---------------------------------------------------------------------------
@@ -308,6 +345,19 @@ def consult_forensic_analyst(
     if not player_message or not player_message.strip():
         raise ForensicAnalystError("player_message must be a non-empty string")
 
+    # Visual separator + scope header for this consultation in the activity log.
+    _log_line("")
+    _question_preview = (
+        player_message if len(player_message) < 100
+        else player_message[:97] + "..."
+    )
+    _emit(
+        "Agent",
+        "Forensic Analyst: beginning consultation",
+        scenario=scenario.get("scenario_id", "?"),
+        question=_question_preview,
+    )
+
     deployment = resolve_deployment(
         deployment,
         "FORENSIC_ANALYST_DEPLOYMENT",
@@ -320,23 +370,31 @@ def consult_forensic_analyst(
         client = build_azure_client()
         system_prompt = load_prompt(PROMPT_PATH)
     except AgentClientError as exc:
+        _emit("Error", f"Client/prompt setup failed: {exc}")
         raise ForensicAnalystError(str(exc)) from exc
+
+    _emit(
+        "Agent",
+        f"Loaded system prompt ({len(system_prompt)} chars)",
+        path=PROMPT_PATH.name,
+    )
 
     # Foundry IQ retrieval (optional, graceful on failure).
     retrieved_context_text = ""
-    retrieval_count = 0
+    retrievals: list[dict[str, Any]] = []
     if enable_retrieval:
-        retrieved_context_text, retrieval_count = _fetch_retrieved_context(
+        retrieved_context_text, retrievals = _fetch_retrieved_context(
             player_message,
             top_k=retrieval_top_k,
             stream_to_stdout=stream_to_stdout,
         )
-        if stream_to_stdout and retrieval_count > 0:
+        if stream_to_stdout and len(retrievals) > 0:
             sys.stdout.write(
-                f"[Retrieved {retrieval_count} relevant passages "
+                f"[Retrieved {len(retrievals)} relevant passages "
                 f"from Foundry IQ]\n"
             )
             sys.stdout.flush()
+    retrieval_count = len(retrievals)
 
     user_message = _build_user_message(
         scenario, player_message, retrieved_context_text
@@ -355,16 +413,28 @@ def consult_forensic_analyst(
     for attempt in range(max_retries + 1):
         attempts = attempt + 1
         is_retry = attempt > 0
-        if is_retry and stream_to_stdout:
-            sys.stdout.write(
-                f"\n[Azure content filter triggered, retrying "
-                f"({attempt}/{max_retries})...]\n"
+        if is_retry:
+            _emit(
+                "Agent",
+                f"Retrying after content filter ({attempt}/{max_retries})",
             )
-            sys.stdout.flush()
+            if stream_to_stdout:
+                sys.stdout.write(
+                    f"\n[Azure content filter triggered, retrying "
+                    f"({attempt}/{max_retries})...]\n"
+                )
+                sys.stdout.flush()
 
+        _emit(
+            "Azure OpenAI",
+            f"POST {deployment}",
+            max_tokens=max_tokens,
+            temp=temperature,
+        )
         start = time.monotonic()
         parts: list[str] = []
         finish_reason = None
+        first_token_time: float | None = None
 
         try:
             stream = client.chat.completions.create(
@@ -384,11 +454,25 @@ def consult_forensic_analyst(
                 content = getattr(choice.delta, "content", None)
                 if not content:
                     continue
+                if first_token_time is None:
+                    first_token_time = time.monotonic()
+                    first_token_ms = int(
+                        (first_token_time - start) * 1000
+                    )
+                    _emit(
+                        "Azure OpenAI",
+                        f"First token in {first_token_ms}ms",
+                    )
                 parts.append(content)
                 if stream_to_stdout:
                     sys.stdout.write(content)
                     sys.stdout.flush()
         except Exception as exc:
+            _emit(
+                "Error",
+                f"Azure OpenAI request failed: {exc}",
+                deployment=deployment,
+            )
             raise ForensicAnalystError(
                 f"Azure OpenAI request to deployment '{deployment}' failed: {exc}"
             ) from exc
@@ -399,6 +483,13 @@ def consult_forensic_analyst(
 
         elapsed = time.monotonic() - start
         reply_text = "".join(parts)
+        # Token count is an approximation: roughly 4 chars per token in English.
+        approx_tokens = len(reply_text) // 4
+        _emit(
+            "Azure OpenAI",
+            f"Stream complete: ~{approx_tokens} tokens in {elapsed:.1f}s",
+            finish_reason=finish_reason or "unknown",
+        )
 
         if finish_reason == "content_filter" and attempt < max_retries:
             continue
@@ -426,6 +517,13 @@ def consult_forensic_analyst(
             f"elapsed: {elapsed:.1f}s, attempts: {attempts}"
         )
 
+    _emit(
+        "Agent",
+        f"Forensic Analyst returned {len(reply_text)} chars",
+        elapsed=f"{elapsed:.1f}s",
+        attempts=attempts,
+        sources=retrieval_count,
+    )
     return {
         "reply": reply_text.strip(),
         "elapsed_seconds": elapsed,
@@ -433,6 +531,7 @@ def consult_forensic_analyst(
         "attempts": attempts,
         "scenario_id": scenario.get("scenario_id", "?"),
         "retrieval_count": retrieval_count,
+        "retrievals": retrievals,
     }
 
 

@@ -14,6 +14,18 @@ azure-search-documents>=11.5.0
 # Load .env files at module load so CLI smoke tests pick up Azure config
 python-dotenv>=1.0.0
 
+# -- UI dependencies (the Chainlit demo surface) --
+
+# Chainlit: the chat-style UI that the audience sees on stream.
+# Runs as `chainlit run app.py`. The CLI orchestrator and unit tests
+# do not depend on this; install is required only for the UI path.
+chainlit>=1.3.0
+
+# Pillow: used by scripts/build_avatars.py to generate the 9 agent
+# avatar PNGs (initials in colored circles). One-time generation; the
+# resulting PNGs live in .chainlit/public/avatars/.
+pillow>=10.0.0
+
 # -- Test dependencies (pytest discovers tests/ automatically) --
 
 # pytest: test runner and assertion engine

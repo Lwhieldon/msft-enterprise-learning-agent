@@ -227,3 +227,6 @@ __marimo__/
 # Compliance Academy local artifacts
 scenario_generator_debug.txt
 stress_report.json
+
+# Activity log (live demo telemetry; written by src/activity_log.py)
+logs/

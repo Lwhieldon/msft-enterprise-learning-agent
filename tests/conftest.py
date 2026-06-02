@@ -19,9 +19,17 @@ If a test needs a mutable copy, it should ``copy.deepcopy`` the fixture.
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 import pytest
+
+# Disable activity log writes BEFORE any test module imports happen, so
+# importing src.agents.* does not create a logs/ directory in the working
+# directory during pytest collection. (The agents themselves do not emit
+# at import time, but smoke imports could touch the log path. Setting the
+# env var here also makes any unit test that does trigger an emit a no-op.)
+os.environ.setdefault("ACTIVITY_LOG_DISABLED", "1")
 
 from src.scenario_loader import load_scenario_by_name
 
