@@ -74,22 +74,55 @@ h1, h2, h3, h4, h5, h6,
 
 /* ----------------------------------------------------------------------------
    Header bar (top of app, contains logo + project name)
+
+   Chainlit 1.3+ doesn't always use a <header> element; the top bar is
+   sometimes a plain <div> with utility classes. We cast a wide net to
+   catch every variant: semantic <header>, MUI AppBar, role="banner",
+   and the Chainlit-specific top container.
    ---------------------------------------------------------------------------- */
-header,
-header[class*="MuiAppBar"],
-[class*="Header"] {
+html body header,
+html body header[class*="MuiAppBar"],
+html body [class*="Header"],
+html body [role="banner"],
+/* Chainlit 1.3+ shadcn variant: a fixed top div with sticky positioning */
+html body div[class*="sticky"][class*="top-0"],
+html body div.fixed.top-0,
+html body nav[class*="sticky"],
+html body nav.fixed.top-0 {
   background-color: var(--sch-navy) !important;
   border-bottom: 2px solid var(--sch-blue) !important;
   box-shadow: var(--sch-shadow) !important;
+  color: var(--sch-white) !important;
 }
 
-/* Project name in header */
-header [class*="MuiTypography"],
-header a,
-header span {
+/* All text inside the header should read on navy. The Readme/theme-toggle
+   links and any project-name text get white treatment in Rubik. */
+html body header [class*="MuiTypography"],
+html body header a,
+html body header span,
+html body header button,
+html body [role="banner"] a,
+html body [role="banner"] span,
+html body [role="banner"] button,
+html body div[class*="sticky"][class*="top-0"] a,
+html body div[class*="sticky"][class*="top-0"] span,
+html body div[class*="sticky"][class*="top-0"] button,
+html body nav[class*="sticky"] a,
+html body nav[class*="sticky"] span,
+html body nav[class*="sticky"] button {
   color: var(--sch-white) !important;
   font-family: "Rubik", sans-serif !important;
   font-weight: 500 !important;
+}
+
+/* Header icon buttons (theme toggle, new chat, etc.) get a faint hover
+   state in Sky Blue so they're discoverable but not loud. */
+html body header button:hover,
+html body [role="banner"] button:hover,
+html body div[class*="sticky"][class*="top-0"] button:hover,
+html body nav[class*="sticky"] button:hover {
+  background-color: rgba(0, 121, 255, 0.18) !important;
+  color: var(--sch-sky) !important;
 }
 
 /* ----------------------------------------------------------------------------
@@ -219,11 +252,99 @@ button[class*="action"]:hover,
 
 /* ----------------------------------------------------------------------------
    Source elements (Foundry IQ source attachments in the side panel)
+
+   When the player clicks a [N] source link, Chainlit opens a drawer
+   (shadcn Sheet component, role="dialog" with data-state="open"). The
+   default styling is dark with serif headings. We override:
+     1. Background → SC&H Deep Navy
+     2. Side border → Mint Green accent (matches Foundry IQ event color)
+     3. Headings → Rubik, Ice Blue
+     4. Body prose → Libre Franklin, white
+     5. Strong/em → Mint Green for callouts
    ---------------------------------------------------------------------------- */
-[class*="ElementSideView"],
-[class*="element-side"] {
-  background-color: var(--sch-mid-navy) !important;
+
+/* Drawer container — covers MUI Drawer, shadcn Sheet, and generic dialogs */
+html body [class*="ElementSideView"],
+html body [class*="element-side"],
+html body [class*="SideView"],
+html body [class*="side-view"],
+html body [role="dialog"][data-state="open"],
+html body [class*="MuiDrawer-paper"],
+html body div[class*="fixed"][class*="right-0"][class*="top-0"][class*="h-full"] {
+  background-color: var(--sch-navy) !important;
   border-left: 3px solid var(--sch-mint) !important;
+  color: var(--sch-white) !important;
+  font-family: "Libre Franklin", sans-serif !important;
+  box-shadow: var(--sch-shadow-lg) !important;
+}
+
+/* All headings inside the side panel — Rubik in Ice Blue with mint underline
+   for h1/h2 so they pop on the navy background. */
+html body [class*="ElementSideView"] :is(h1, h2, h3, h4, h5, h6),
+html body [class*="SideView"] :is(h1, h2, h3, h4, h5, h6),
+html body [role="dialog"][data-state="open"] :is(h1, h2, h3, h4, h5, h6),
+html body [class*="MuiDrawer-paper"] :is(h1, h2, h3, h4, h5, h6) {
+  font-family: "Rubik", sans-serif !important;
+  color: var(--sch-ice) !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
+  background-color: transparent !important;
+}
+
+html body [class*="ElementSideView"] :is(h1, h2),
+html body [class*="SideView"] :is(h1, h2),
+html body [role="dialog"][data-state="open"] :is(h1, h2),
+html body [class*="MuiDrawer-paper"] :is(h1, h2) {
+  border-bottom: 1px solid var(--sch-blue) !important;
+  padding-bottom: 6px !important;
+  margin-top: 1.2em !important;
+}
+
+/* Body prose inside the side panel — Libre Franklin, white, comfortable
+   line-height for reading dense policy text. */
+html body [class*="ElementSideView"] :is(p, li, span, div),
+html body [class*="SideView"] :is(p, li, span, div),
+html body [role="dialog"][data-state="open"] :is(p, li, span, div),
+html body [class*="MuiDrawer-paper"] :is(p, li, span, div) {
+  font-family: "Libre Franklin", sans-serif !important;
+  color: var(--sch-white) !important;
+  line-height: 1.55 !important;
+}
+
+/* Mint highlight on strong text inside the side panel — useful for the
+   control identifiers (CC6.1, HD-SEC-VR-001 §7, etc.) that the policy
+   docs use as inline emphasis. */
+html body [class*="ElementSideView"] strong,
+html body [class*="SideView"] strong,
+html body [role="dialog"][data-state="open"] strong,
+html body [class*="MuiDrawer-paper"] strong {
+  color: var(--sch-mint) !important;
+  font-weight: 600 !important;
+}
+
+/* The drawer header (title row with the back-arrow + source label) —
+   ensure the back arrow button sits on the navy and reads in white. */
+html body [class*="ElementSideView"] button,
+html body [class*="SideView"] button,
+html body [role="dialog"][data-state="open"] button {
+  color: var(--sch-white) !important;
+  background-color: transparent !important;
+}
+html body [class*="ElementSideView"] button:hover,
+html body [class*="SideView"] button:hover,
+html body [role="dialog"][data-state="open"] button:hover {
+  color: var(--sch-mint) !important;
+  background-color: rgba(65, 239, 175, 0.12) !important;
+}
+
+/* Code blocks inside the side panel — keep the same Mid Navy / Mint
+   treatment as the chat so policy excerpts look consistent. */
+html body [class*="ElementSideView"] code,
+html body [class*="SideView"] code,
+html body [role="dialog"][data-state="open"] code,
+html body [class*="MuiDrawer-paper"] code {
+  background-color: var(--sch-mid-navy) !important;
+  color: var(--sch-mint) !important;
 }
 
 /* ----------------------------------------------------------------------------

@@ -10,17 +10,25 @@ prompts/
 ├── game_master.md                     orchestrator, narrator, dice arbiter, state owner
 ├── party/
 │   ├── forensic_analyst.md            digital forensics, anomaly detection (loudest reasoner)
-│   ├── it_specialist.md               network and access control mechanics
-│   ├── hr_liaison.md                  rapport, behavioral cues, ethics
-│   ├── compliance_auditor.md          framework citations, control mapping
-│   └── whistleblower_contact.md       rival archetype, unreliable ally
+│   ├── it_specialist.md               [LEGACY] network and access control mechanics
+│   ├── hr_liaison.md                  [LEGACY] rapport, behavioral cues, ethics
+│   ├── compliance_auditor.md          [LEGACY] framework citations, control mapping
+│   └── whistleblower_contact.md       [LEGACY] rival archetype, unreliable ally
 ├── suspects/
 │   └── _template.md                   reusable NPC template (instantiated per scenario)
 ├── scenario_generator.md              live-twist case builder
 └── compliance_officer.md              post-scene educator
 ```
 
-All 9 prompts are now in place. Validation against real model outputs is the next step (see `Validation Strategy` below).
+The **current Chainlit UI** (`app.py`) wires five prompts:
+
+- `game_master.md`
+- `party/forensic_analyst.md`
+- `compliance_officer.md`
+- `scenario_generator.md`
+- `suspects/_template.md` (instantiated five times per scenario)
+
+The four `[LEGACY]` files in `party/` were written during the initial design to support a richer five-agent investigator party (IT Specialist, HR Liaison, Compliance Auditor, Whistleblower Contact). They are kept in the repo as design reference, but the current build does not load them. The Compliance Auditor's role was folded into the Compliance Officer for a tighter live-demo surface.
 
 ## How They Get Used
 

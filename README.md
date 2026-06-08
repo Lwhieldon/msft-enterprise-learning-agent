@@ -10,10 +10,13 @@ Compliance Academy delivers cybersecurity and compliance education through a pla
 |---|---|
 | `docs/concept.md` | The premise, agent cast, Microsoft IQ integration, scoring map |
 | `docs/architecture.md` | Agent specifications, Model Router setup, game mechanics, synthetic data |
-| `docs/live_battle_runbook.md` | Stream-day cheat sheet, four-slot demo flow, fallback plans |
+| `docs/live_battle_runbook.md` | Full stream-day runbook, four-slot demo flow, fallback plans |
+| `docs/stream_day_cheatsheet.md` | One-page laser-focused day-of reference (commands, talking points, recovery moves) |
+| `docs/blog/` | Launch blog drafts (GitHub + Tech Community versions) and hero image |
 | `2-reasoning-agents/` | The Microsoft Reactor starter kit (reference materials, do not modify) |
-| `src/` | Application code (to be added) |
-| `data/synthetic/` | Synthetic policies, employees, scenarios (to be added) |
+| `app.py` | Chainlit UI entry point (the player-facing surface) |
+| `src/` | Application code (agents, orchestrator, scenario loader) |
+| `data/synthetic/` | Synthetic policies, scenarios, Foundry IQ source content |
 
 ## Tech stack
 
@@ -34,7 +37,7 @@ The project runs on Python 3.10+ and authenticates to Azure AI Foundry via Entra
 ### 1. Clone and set up the Python environment
 
 ```powershell
-git clone https://github.com/<your-org>/msft-enterprise-learning-agent.git
+git clone https://github.com/lwhieldon/msft-enterprise-learning-agent.git
 cd msft-enterprise-learning-agent
 
 python -m venv .venv
@@ -127,17 +130,24 @@ pytest tests/integration/test_agents.py::TestBasicSmoke -m integration
 
 The pytest markers are defined in `pytest.ini`. `integration` is the marker for any test requiring live Azure access; the default `pytest` invocation deselects it.
 
-### 7. Running the orchestrator
+### 7. Running the game
 
-The orchestrator is the demo entry point. It loads a scenario and gives you a REPL for interrogating suspects, consulting the Forensic Analyst, hot-loading a generated scenario, and triggering the Compliance Officer closer.
+The primary player-facing surface is the **Chainlit UI**. The CLI orchestrator is preserved as a fallback for live-demo recovery and for headless smoke testing.
 
 ```powershell
+# Chainlit UI (primary, recommended for demos)
+chainlit run app.py -w
+
+# In a second terminal, tail the live activity log
+.\scripts\tail_activity.ps1 -Clear
+
+# CLI orchestrator (fallback / scripted runs)
 python -m src.orchestrator                              # default: Helix Dynamics breach
 python -m src.orchestrator --scenario helix_dynamics_supplychain
 python -m src.orchestrator --scenario helix_dynamics_vishing
 ```
 
-Inside the REPL, type `help` for the command list. A typical demo session looks like:
+Inside the CLI REPL, type `help` for the command list. A typical CLI demo session looks like:
 
 ```
 > look                          # hear the case premise

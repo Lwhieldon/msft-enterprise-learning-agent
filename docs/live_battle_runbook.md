@@ -107,7 +107,7 @@ One line. Pick one of:
 **If the Scenario Generator hiccups or generates poor output:**
 
 1. Acknowledge briefly. "The Scenario Generator just produced something I'm not happy with. Let me run a backup."
-2. Load one of the pre-tested backup scenario seeds (`scenarios/solarwinds_backup.json` or `scenarios/mgm_backup.json`).
+2. Load one of the pre-built backup scenarios (`helix_dynamics_supplychain.json` or `helix_dynamics_vishing.json`).
 3. Continue the demo from there. The audience will not know the difference.
 
 **If a model has a transient outage:**
@@ -183,7 +183,8 @@ The day before the live battle, do a full integration test pass. This is the mos
 
 - [ ] Default Helix Dynamics scenario loaded
 - [ ] Backup scenarios (`helix_dynamics_supplychain.json`, `helix_dynamics_vishing.json`) verified end-to-end
-- [ ] Chainlit UI running on a dedicated tab
+- [ ] Chainlit UI running on a dedicated tab (`chainlit run app.py -w`)
+- [ ] Live activity log tailing in a second terminal (`.\scripts\tail_activity.ps1 -Clear`)
 - [ ] Second Chainlit tab pre-warmed as backup
 
 ### Stream materials

@@ -226,16 +226,20 @@ Acts advance based on state. The Game Master decides when enough has happened to
 
 All data is generated for this project. No real customer information, no PII, no copyrighted material.
 
-Planned files under `data/synthetic/`:
+Actual files under `data/synthetic/`:
 
-- `helix_employees.json`: 25 fabricated employee profiles
-- `helix_policies/*.md`: 12 synthetic policy documents
-- `compliance_frameworks/*.md`: synthetic excerpts of major frameworks
-- `scenarios/helix_dynamics_default.json`: the default playable scenario
-- `scenarios/solarwinds_backup.json`: pre-tested backup scenario
-- `scenarios/mgm_backup.json`: pre-tested backup scenario
-- `work_signals.json`: synthetic Work IQ profiles for the employee set
-- `semantic_model.json`: Fabric IQ ontology in JSON form
+- `foundry_iq/frameworks/*.md`: synthetic excerpts of SOC 2, HIPAA, ISO 27001, NIST 800-53
+- `foundry_iq/helix_policies/*.md`: 4 synthetic Helix Dynamics internal policies (access control, data classification, incident response, vendor management)
+- `foundry_iq/playbooks/*.md`: 3 synthetic incident-response playbooks (credential compromise, insider threat, vendor breach)
+- `foundry_iq/helix_dynamics_overview.md`: company background
+- `scenarios/_shared/scenario_commons.json`: canonical suspect base personas, company profile, system list
+- `scenarios/helix_dynamics_default.json`: SCN-001, the default playable scenario
+- `scenarios/helix_dynamics_supplychain.json`: SCN-002, pre-built backup scenario
+- `scenarios/helix_dynamics_vishing.json`: SCN-003, pre-built backup scenario
+
+The ~52 chunks in the Azure AI Search index `compliance-content-index` are produced by the indexer running over the markdown content above.
+
+Work IQ employee signals and Fabric IQ semantic model files were scoped out of the live-battle build to keep the surface tight. Both could be added without changing the agent topology.
 
 ## UI Layer
 
@@ -266,7 +270,7 @@ AZURE_SEARCH_API_VERSION=2024-07-01
 ## Reliability Considerations
 
 - Default Helix Dynamics scenario is fully hand-crafted as the fallback if the Scenario Generator misbehaves under live conditions
-- Two pre-tested backup scenario seeds (SolarWinds-inspired, MGM-inspired) are checked into the repo for hosts to choose from if they prefer not to provide their own
+- Two pre-built backup scenarios (`helix_dynamics_supplychain.json`, `helix_dynamics_vishing.json`) are checked into the repo for live-demo recovery
 - Model Router automatic failover handles transient model issues without stopping the demo
 - Suspect dialogue passes through a content filter to prevent the role-play from generating anything inappropriate for the YouTube audience
 - A "panic button" in the Chainlit UI reloads the scenario from a known-good state if anything looks off mid-stream

@@ -145,6 +145,7 @@ def _reset_session(scenario: dict[str, Any]) -> None:
     _set_active_suspect(None)
     cl.user_session.set("histories", {})
     cl.user_session.set("scene_closed", False)
+    cl.user_session.set("awaiting_breach", False)
 
 
 def _is_scene_closed() -> bool:
@@ -419,6 +420,40 @@ async def on_pick_suspect(action: cl.Action) -> None:
     ).send()
 
 
+def _make_evidence_picker_actions(
+    evidence_seeds: list[dict[str, Any]],
+    current_evidence_id: str | None = None,
+) -> list[cl.Action]:
+    """Build the EV-NNN picker action buttons for an evidence list.
+
+    Attached to both the initial Evidence roster message and to every
+    individual evidence detail message, so the presenter always has the
+    full set of picker buttons at the bottom of whatever they're reading.
+    No need to scroll back up to the roster after clicking through
+    several items.
+
+    If ``current_evidence_id`` is supplied, that item's button gets a
+    visual marker so the presenter can see at a glance which item is
+    currently displayed.
+    """
+    actions: list[cl.Action] = []
+    for ev in evidence_seeds:
+        eid = ev.get("evidence_id")
+        if not eid:
+            continue
+        # Mark the currently-displayed item so the presenter doesn't
+        # accidentally click the same evidence twice.
+        marker = "• " if eid == current_evidence_id else "📄 "
+        actions.append(
+            cl.Action(
+                name="show_evidence",
+                payload={"evidence_id": eid},
+                label=f"{marker}{eid}",
+            )
+        )
+    return actions
+
+
 @cl.action_callback("evidence")
 async def on_evidence(action: cl.Action) -> None:
     scenario = _get_scenario()
@@ -431,56 +466,139 @@ async def on_evidence(action: cl.Action) -> None:
         await cl.Message(content="No evidence yet.", author=AVATAR_GM).send()
         return
 
-    lines = ["**Evidence on the table:**\n"]
+    # Roster: one line per evidence item in the main message for context,
+    # plus a dedicated action button per item so the presenter has an
+    # explicit, discoverable click target for each piece during the demo.
+    lines = [
+        "**Evidence on the table.** "
+        "Click any **EV-NNN** button below to read the full detail.\n"
+    ]
     for ev in evidence:
         eid = ev.get("evidence_id", "?")
         source = ev.get("source", "?")
-        content = ev.get("content", "")
         value = ev.get("value", "?")
-        lines.append(f"**{eid}** _(value {value}/10)_ — {source}")
-        lines.append(f"{content}\n")
+        lines.append(f"- **{eid}** _(value {value}/10)_ — {source}")
+
+    # Picker actions PLUS the persistent action row so the player can
+    # escape to Suspects / Accuse / Wrap at any time.
+    pick_actions = _make_evidence_picker_actions(evidence)
 
     await cl.Message(
         content="\n".join(lines),
         author=AVATAR_GM,
-        actions=_make_action_row(),
+        actions=pick_actions + _make_action_row(),
+    ).send()
+
+
+@cl.action_callback("show_evidence")
+async def on_show_evidence(action: cl.Action) -> None:
+    """Render the full content of a single evidence item.
+
+    Triggered by the per-evidence picker buttons on the Evidence roster
+    message OR by the same picker re-attached to any evidence detail
+    message. Posts a new GM message with the item's full content AND a
+    fresh picker so the presenter can keep navigating without scrolling
+    back up to the original roster.
+    """
+    scenario = _get_scenario()
+    if not scenario:
+        return
+    evidence_id = (action.payload or {}).get("evidence_id")
+    if not evidence_id:
+        return
+
+    evidence = scenario.get("evidence_seeds", [])
+    ev = next(
+        (e for e in evidence if e.get("evidence_id") == evidence_id),
+        None,
+    )
+    if not ev:
+        await cl.Message(
+            content=f"Evidence item {evidence_id} not found in this scenario.",
+            author=AVATAR_GM,
+        ).send()
+        return
+
+    _emit("Chainlit", f"User opened evidence detail: {evidence_id}")
+
+    eid = ev.get("evidence_id", "?")
+    source = ev.get("source", "?")
+    content = (ev.get("content", "") or "").strip() or "_(no content)_"
+    value = ev.get("value", "?")
+
+    # Re-attach the evidence picker (with current item marked) plus the
+    # persistent action row, so the presenter can jump to any other item
+    # directly from this detail message instead of having to scroll up
+    # or re-click 🔍 Evidence.
+    pick_actions = _make_evidence_picker_actions(
+        evidence, current_evidence_id=eid
+    )
+
+    await cl.Message(
+        content=(
+            f"**{eid}** _(value {value}/10)_ — {source}\n\n"
+            f"{content}"
+        ),
+        author=AVATAR_GM,
+        actions=pick_actions + _make_action_row(),
     ).send()
 
 
 @cl.action_callback("generate")
 async def on_generate(action: cl.Action) -> None:
-    _emit("Chainlit", "User clicked: Generate")
+    """Prompt the user for a breach description.
 
-    ask = await cl.AskUserMessage(
+    Instead of using cl.AskUserMessage (which has race conditions with
+    the on_message handler), we set a session flag and let the next
+    free-text message be routed to the scenario generator by on_message.
+    """
+    _emit("Chainlit", "User clicked: Generate (awaiting breach description)")
+    cl.user_session.set("awaiting_breach", True)
+
+    await cl.Message(
         content=(
             "**Describe a breach scenario.** A few sentences is plenty. "
             "The Scenario Generator will produce a complete case in "
             "30 to 60 seconds.\n\n"
             "_Example: \"An employee's session token gets stolen at an "
             "industry conference and used to exfiltrate regulatory "
-            "documents.\"_"
+            "documents.\"_\n\n"
+            "_Type your breach description in the message box below and "
+            "hit Enter. Click 🚫 Cancel to abort._"
         ),
         author=AVATAR_GM,
-        timeout=600,
+        actions=[
+            cl.Action(
+                name="cancel_generate",
+                payload={},
+                label="🚫 Cancel",
+            ),
+        ] + _make_action_row(),
     ).send()
 
-    if ask is None:
-        await cl.Message(
-            content="No breach description received. Cancelling.",
-            author=AVATAR_GM,
-        ).send()
-        return
 
-    breach = (ask.get("output") or "").strip() if isinstance(ask, dict) else ""
-    if not breach:
+@cl.action_callback("cancel_generate")
+async def on_cancel_generate(action: cl.Action) -> None:
+    """Clear the awaiting_breach flag so the next message routes normally."""
+    if cl.user_session.get("awaiting_breach"):
+        cl.user_session.set("awaiting_breach", False)
+        _emit("Chainlit", "User cancelled scenario generation")
         await cl.Message(
-            content="Empty breach description. Cancelling.",
+            content="Scenario generation cancelled. Continue investigating.",
             author=AVATAR_GM,
+            actions=_make_action_row(),
         ).send()
-        return
 
+
+async def _run_scenario_generation(breach: str) -> None:
+    """Call generate_scenario and hot-load the result.
+
+    Sent as its own function so it can be invoked either from a flow
+    that captures a breach description via on_message or any future
+    direct-invocation path.
+    """
     placeholder = cl.Message(
-        content="_Generating a fresh scenario from your description..._",
+        content="_Generating a fresh scenario from your description (30-60 seconds)..._",
         author=AVATAR_SG,
     )
     await placeholder.send()
@@ -492,12 +610,15 @@ async def on_generate(action: cl.Action) -> None:
         placeholder.content = (
             f"**Generation failed:** {exc}\n\n"
             "The current scenario is unchanged. Try again with a different "
-            "breach description."
+            "breach description, or use 📖 Briefing to continue with the "
+            "existing case."
         )
+        placeholder.actions = _make_action_row()
         await placeholder.update()
         return
     except Exception as exc:
         placeholder.content = f"**Unexpected error:** {exc}"
+        placeholder.actions = _make_action_row()
         await placeholder.update()
         return
 
@@ -719,6 +840,18 @@ async def on_message(message: cl.Message) -> None:
 
     text = (message.content or "").strip()
     if not text:
+        return
+
+    # Priority 1: if we're awaiting a breach description for Generate,
+    # this message IS the breach description — route to scenario generator
+    # instead of FA/suspect.
+    if cl.user_session.get("awaiting_breach"):
+        cl.user_session.set("awaiting_breach", False)
+        _emit(
+            "Chainlit",
+            f"Captured breach description for Generate: {text[:80]!r}",
+        )
+        await _run_scenario_generation(text)
         return
 
     active_suspect = _get_active_suspect()
