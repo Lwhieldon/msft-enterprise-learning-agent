@@ -11,7 +11,7 @@ This is the laser-focused one-page reference for stream day. For the full runboo
 ## T-30 Pre-Flight (5 minutes total)
 
 ```powershell
-cd C:\Users\lwhieldon\Microsoft\MSFTAgentsLeague\msft-enterprise-learning-agent
+cd C:\Users\lwhieldon\msft-enterprise-learning-agent
 .\.venv\Scripts\Activate.ps1
 az login
 az account show     # confirm SC&H Foundry subscription is active
@@ -28,7 +28,7 @@ If anything in the block above fails, fix it before going live. Re-running `az l
 ### Terminal A — Activity log (the audience proof surface)
 
 ```powershell
-cd C:\Users\lwhieldon\Microsoft\MSFTAgentsLeague\msft-enterprise-learning-agent
+cd C:\Users\lwhieldon\msft-enterprise-learning-agent
 .\.venv\Scripts\Activate.ps1
 .\scripts\tail_activity.ps1 -Clear
 ```
@@ -36,17 +36,19 @@ cd C:\Users\lwhieldon\Microsoft\MSFTAgentsLeague\msft-enterprise-learning-agent
 ### Terminal B — Chainlit UI (the player surface)
 
 ```powershell
-cd C:\Users\lwhieldon\Microsoft\MSFTAgentsLeague\msft-enterprise-learning-agent
+cd C:\Users\lwhieldon\msft-enterprise-learning-agent
 .\.venv\Scripts\Activate.ps1
-chainlit run app.py -w
+chainlit run app.py
 ```
+
+_Note: no `-w` flag for the live demo. Watch mode adds a file watcher that logs "change detected" noise every time the agents write to `activity.log`. Cleaner stream terminal without it._
 
 Open browser to `http://localhost:8000`, hard-refresh with Ctrl+Shift+R to bust any CSS cache.
 
 ### Terminal C — CLI fallback (open but minimized)
 
 ```powershell
-cd C:\Users\lwhieldon\Microsoft\MSFTAgentsLeague\msft-enterprise-learning-agent
+cd C:\Users\lwhieldon\msft-enterprise-learning-agent
 .\.venv\Scripts\Activate.ps1
 # Don't run yet. If Chainlit breaks mid-stream:
 python -m src.orchestrator

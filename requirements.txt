@@ -14,6 +14,12 @@ azure-search-documents>=11.5.0
 # Load .env files at module load so CLI smoke tests pick up Azure config
 python-dotenv>=1.0.0
 
+# truststore: routes Python TLS through the Windows cert store so HTTPS
+# works on corporate-managed devices behind Netskope/ZScaler/Defender TLS
+# inspection (which install their own root CA into the OS, not certifi).
+# Used by app.py and tests/conftest.py via truststore.inject_into_ssl().
+truststore>=0.10.0
+
 # -- UI dependencies (the Chainlit demo surface) --
 
 # Chainlit: the chat-style UI that the audience sees on stream.

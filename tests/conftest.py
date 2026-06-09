@@ -19,6 +19,14 @@ If a test needs a mutable copy, it should ``copy.deepcopy`` the fixture.
 
 from __future__ import annotations
 
+# Corporate TLS interception fix: use the Windows certificate store (which
+# has the Netskope corporate root CA installed by IT) instead of certifi.
+# MUST run before any openai/azure-* imports happen, including the transitive
+# ones from src.scenario_loader below, or integration tests fail with
+# "self-signed certificate in certificate chain" on this loaner laptop.
+import truststore
+truststore.inject_into_ssl()
+
 import os
 from typing import Any
 

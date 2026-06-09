@@ -34,10 +34,24 @@ Companion tooling:
     Open a second PowerShell window before launching:
         .\\scripts\\tail_activity.ps1 -Clear
     Then run:
-        chainlit run app.py -w
+        chainlit run app.py
+
+    The ``-w`` (watch mode) flag is useful during development but adds
+    file-watcher noise during a live demo every time the agents write
+    to activity.log. Drop it for streams; keep it while iterating on
+    Python code.
 """
 
 from __future__ import annotations
+
+# Corporate TLS interception fix: use the Windows certificate store (which has
+# the Netskope corporate root CA installed by IT) instead of the certifi bundle
+# that ships with Python packages. MUST run before any openai/azure-* imports
+# below or those clients are created with the wrong SSL context, and every
+# outbound HTTPS request fails with "self-signed certificate in certificate
+# chain" on this loaner laptop.
+import truststore
+truststore.inject_into_ssl()
 
 from typing import Any
 

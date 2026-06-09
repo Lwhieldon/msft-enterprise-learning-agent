@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/compliance-academy-hero.png" alt="Compliance Academy — a multi-agent cyber-mystery RPG built on Microsoft Foundry Agent Service" width="100%">
+</p>
+
 # Compliance Academy
 
 A multi-agent role-play game for corporate compliance training, built for the Microsoft Reactor Agents League Post Build edition (Reasoning Agents Live Streaming Battle, June 10, 2026).
@@ -8,12 +12,12 @@ Compliance Academy delivers cybersecurity and compliance education through a pla
 
 | Path | Purpose |
 |---|---|
+| `docs/compliance-academy-hero.png` | The hero banner shown at the top of this README |
 | `docs/concept.md` | The premise, agent cast, Microsoft IQ integration, scoring map |
 | `docs/architecture.md` | Agent specifications, Model Router setup, game mechanics, synthetic data |
 | `docs/live_battle_runbook.md` | Full stream-day runbook, four-slot demo flow, fallback plans |
 | `docs/stream_day_cheatsheet.md` | One-page laser-focused day-of reference (commands, talking points, recovery moves) |
 | `docs/blog/` | Launch blog drafts (GitHub + Tech Community versions) and hero image |
-| `2-reasoning-agents/` | The Microsoft Reactor starter kit (reference materials, do not modify) |
 | `app.py` | Chainlit UI entry point (the player-facing surface) |
 | `src/` | Application code (agents, orchestrator, scenario loader) |
 | `data/synthetic/` | Synthetic policies, scenarios, Foundry IQ source content |
@@ -136,7 +140,7 @@ The primary player-facing surface is the **Chainlit UI**. The CLI orchestrator i
 
 ```powershell
 # Chainlit UI (primary, recommended for demos)
-chainlit run app.py -w
+chainlit run app.py
 
 # In a second terminal, tail the live activity log
 .\scripts\tail_activity.ps1 -Clear

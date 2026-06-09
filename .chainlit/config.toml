@@ -47,7 +47,7 @@ name = "Compliance Academy"
 
 # Description shown in the welcome screen (chainlit.md provides richer
 # welcome text). Keep this short so the header stays clean.
-description = "SC&H Group | Multi-agent compliance training on Microsoft Foundry"
+description = "Multi-agent compliance training on Microsoft Foundry"
 
 # Default to the dark theme to make the SC&H Deep Navy + Bright Blue
 # scheme pop on stream. Users can toggle to light if they want.
