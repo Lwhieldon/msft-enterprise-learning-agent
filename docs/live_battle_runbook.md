@@ -1,5 +1,8 @@
 # Live Battle Runbook
 
+> **For day-of reference, use [`stream_day_cheatsheet.md`](./stream_day_cheatsheet.md) — it's the one-page laser-focused version of this doc with the right commands and laser-focused slot prompts.**
+> **This runbook is the longer background doc: minute-mark map, pre-roll bio, full slot scripts, and pre-stream checklist.**
+
 **Event:** Agents League Post Build edition, Reasoning Agents Live Streaming Battle
 **Date:** June 10, 2026, 12:00 PM EST (9:00 AM PT)
 **Platform:** Streamyard, broadcast to the Microsoft Reactor YouTube channel
@@ -24,8 +27,8 @@ These minute marks are estimates based on Battle 2. Adjust to host pacing on the
 | Slot | Approx. minute | Duration | What Lee shows |
 |---|---|---|---|
 | Pre-roll bio | 10-12 | 60 seconds | One-line pitch, hint at the surprise |
-| Architecture intro | 18-22 | 3-4 minutes | Diagram, agent topology, Model Router, tee up Scenario Generator |
-| Check-in #1 | 30-35 | 3-4 minutes | Live interrogation in default Helix Dynamics scenario, reasoning chains streaming |
+| Architecture intro | 18-22 | 3-4 minutes | Diagram, agent topology, Foundry IQ retrieval grounding, tee up Scenario Generator |
+| Check-in #1 | 30-35 | 3-4 minutes | Evidence picker beat, Forensic Analyst grounded retrieval with sources panel, suspect contrast |
 | Check-in #2 | 43-48 | 3-4 minutes | The wow moment: Scenario Generator builds the host-thrown breach into a new case |
 | Final reveal | 51-56 | 3-4 minutes | Live interrogation of the generated scenario, Compliance Officer surfaces the lesson |
 | Reflection | 58-59 | 30-60 seconds | One line: what comes next |
@@ -34,7 +37,7 @@ These minute marks are estimates based on Battle 2. Adjust to host pacing on the
 
 Draft, customize as you like:
 
-> "I'm Lee Whieldon, a Principal on SC&H's Enterprise Advisory & Transformation team. Fifteen years modernizing data ecosystems on the Microsoft platform across Azure, Fabric, Power BI, and most recently Foundry and Copilot. For this battle I built Compliance Academy: a multi-agent role-play game on Foundry Agent Service, where five investigator agents help a human player solve a corporate data breach. It leverages all three Microsoft IQs for grounded content and Model Router for cost-aware routing across reasoning and persona models. I'm hoping a host throws me a surprise breach so the system can improvise on stream."
+> "I'm Lee Whieldon, a Principal on SC&H's Enterprise Advisory & Transformation team. Fifteen years modernizing data ecosystems on the Microsoft platform across Azure, Fabric, Power BI, and most recently Foundry and Copilot. For this battle I built Compliance Academy: a multi-agent cyber-mystery game on Microsoft Foundry Agent Service. Four party agents work alongside a roster of five suspects to help a human player solve a corporate data breach. The agents ground their responses in real policy documents through Foundry IQ — an Azure AI Search index covering SOC 2, HIPAA, ISO 27001, NIST 800-53, plus a fictional biotech's internal policies. I'm hoping a host throws me a surprise breach so the system can improvise on stream."
 
 If the host asks a different question, answer it directly and keep the substance.
 
@@ -45,52 +48,54 @@ If the host asks a different question, answer it directly and keep the substance
 **Talking points in order:**
 
 1. The premise. "Helix Dynamics, fictional biotech, lost 14GB of trial data overnight. The player is the investigator on Day 1. This is a role-play game where the gameplay IS the assessment."
-2. The topology. "Game Master orchestrates. Five investigator party members assist the player. Five suspects per scenario. A Scenario Generator agent can produce a new case from any breach description. A Compliance Officer agent surfaces the real-world lesson at the end."
-3. The reasoning showcase. "Four of these agents run on reasoning models routed through Foundry's new Model Router. Three Microsoft IQs plug in as different kinds of evidence: Foundry IQ for compliance frameworks, Work IQ for employee work signals, Fabric IQ for the semantic investigation ontology."
+2. The topology. "Game Master orchestrates the scene. Three other party agents assist: the Forensic Analyst pulls grounded retrieval from a compliance policy index, the Compliance Officer delivers the framework-grounded post-mortem at the end, and the Scenario Generator can hot-load a brand-new case from any breach description. Plus five suspect agents per scenario — persona-driven, each with their own backstory, alibi, and leak conditions."
+3. The reasoning showcase. "All agents run on gpt-4.1-mini routed through Foundry's Model Router. The Forensic Analyst and Compliance Officer ground their responses through Foundry IQ — an Azure AI Search index with 52 chunks across SOC 2, HIPAA, ISO 27001, NIST 800-53, plus the fictional biotech's internal policies. The activity log on screen shows every retrieval with its source filename and relevance score, so you can see the trust loop close in real time."
 4. The tee-up. "I'm going to run the default scenario in a moment, but the part I'm most excited for is when the hosts throw me a new breach. Watch the Scenario Generator write a brand-new case in real time, then watch the player play it."
 
 Target: 3 to 3.5 minutes. Do not exceed 4.
 
 ## Slot 2: Check-in #1 (minute 30-35)
 
-**On screen:** Chainlit UI showing an active interrogation of the HR Director suspect.
+**On screen:** Chainlit UI showing the default Helix Dynamics briefing. About to surface evidence and run a Forensic Analyst question.
 
-**Talking points:**
+**Talking points in order:**
 
-1. "We are in Act 2. The player just asked the HR Director why she stayed late Thursday. Watch the Forensic Analyst's reasoning chain stream in real time as she cross-references the Work IQ signals against the suspect's claimed alibi."
-2. Let the reasoning render. Do not narrate over the streaming tokens. The visual carries the moment.
-3. After the analysis lands: "Notice that the Forensic Analyst flagged a conflict. The HR Director's work signal shows no after-hours activity, but the access logs do. The Compliance Auditor will pick that up next round."
-4. Quick architecture pointer: "Behind the scenes, the GM is routing this turn to the Forensic Analyst with the suspect's response in context. The Foundry Connected Agents pattern handles the plumbing. Model Router selected a reasoning-tier model because the GM flagged this turn as high-complexity."
+1. "We are in Act 1. The player has just been briefed on the breach." Click 🔍 **Evidence**. "Twelve pieces of evidence on the table, each ranked by investigative value. Let me pull up EV-003 — the ServiceNow change request from three weeks before the breach. Notice the requester: Morgan Webb, our IT admin. Notice the approval field is empty." Click 📄 **EV-003**.
+2. Pivot to grounded retrieval. "Now let me ask the Forensic Analyst a question that requires actual policy lookup." Type into chat: *"Walk me through HD-SEC-AC-001 §4.1 and which evidence items show controls were bypassed."*
+3. Let the response stream. As sources attach in the side panel, narrate: "The Forensic Analyst is citing HD-SEC-AC-001 §4.1 in the response text. The side panel is showing the actual policy file the citation was retrieved from — `access_control_policy.md`, with a relevance score. The activity log on the right just emitted `[Foundry IQ] Retrieved 5 sources`. These aren't training data — they're real chunks pulled from the index in real time. That's the trust loop for compliance content."
+4. Contrast with the suspect pattern. Click 👥 **Suspects** → pick **Casey Doyle**. "Now I'm switching to a suspect agent. Casey was the phishing victim — an executive assistant whose session token got stolen." Ask: *"Tell me about emails you received Sunday night before the incident."*
+5. Let the suspect respond. After: "Notice the side panel didn't attach this time. Suspects are persona-driven prompts — backstory, alibi, leak conditions. Same Foundry Agent Service, completely different role. The Forensic Analyst grounds in policy. Suspects ground in their own fabricated history."
 
-**Background activity while this runs:** prepare to paste the host-thrown breach into the Scenario Generator. Have a tab open and ready.
+**Background activity while this runs:** prepare to paste the host-thrown breach into the Scenario Generator. Have it staged mentally.
 
-Target: 3 minutes. Do not exceed 4.
+Target: 3 to 4 minutes. Do not exceed 4.
 
 ## Slot 3: Check-in #2, The Wow Moment (minute 43-48)
 
-**On screen:** Chainlit UI split with the Scenario Generator's reasoning chain on the left and the generated JSON populating on the right.
+**On screen:** Chainlit UI showing the Scenario Generator working: a placeholder message while the model builds the new scenario, with the activity log on the right streaming retrieval and generation events.
 
 **Talking points:**
 
-1. "Earlier the hosts handed me [host's chosen breach]. I just pasted the description into the Scenario Generator. Watch it reason through what a synthetic version of this case would look like."
-2. Let the reasoning stream. Highlight one or two interesting moves the model makes. ("Notice it just deduced that the most plausible suspect role for this attack pattern is a third-party vendor.")
-3. When generation completes: "The output is a complete case file. New synthetic suspects with new alibis. New evidence graph. New mapped compliance lesson. All grounded in Foundry IQ for citation integrity."
-4. "Now I'm going to hot-load this into the game state, and we'll run an interrogation on this brand new scenario in our final slot. Audience, if you can drop in chat which suspect you want me to question first, I'll pick the most-voted one."
+1. "Earlier the hosts handed me [host's chosen breach]. I just pasted the description into the Scenario Generator. Watch it build a complete new case from one sentence."
+2. Let the activity log carry the moment. Highlight one or two interesting things in real time. ("Notice the validation layer just kicked in — the model proposed a scenario, the validator checked it, fed back the error, and the model is now self-correcting. That retry loop is what makes generated scenarios actually usable.")
+3. When generation completes: "The output is a complete case file: brand-new premise, five suspects with backstories and alibis, an evidence graph, six controls implicated, and a compliance lesson mapped to specific framework sections. All wired into the same UI — same buttons, same agents, completely different world."
+4. "Now I'm going to run an interrogation on this brand new scenario in our final slot. Audience, drop in chat which suspect you want me to question first — I'll pick the most-voted one." (Skip the audience-vote ask if chat moderation feels noisy on the day; default to your own pick.)
 
-This is the spike moment. Energy goes up. Be specific about what the system did that was hard.
+This is the spike moment. Energy goes up. Be specific about what the system did that was hard — generating valid JSON that passes structural validation in 30 to 90 seconds is the real engineering moat.
 
 Target: 4 minutes. Can stretch to 4.5 if generation is slow.
 
 ## Slot 4: Final Reveal (minute 51-56)
 
-**On screen:** Live interrogation of the audience-chosen suspect in the newly generated scenario.
+**On screen:** Live interrogation in the newly generated scenario, then the Compliance Officer closer.
 
 **Talking points:**
 
 1. "Audience picked [suspect name]. Here we go." Start the interrogation.
-2. Let one full exchange play out. Party reacts in character. Forensic Analyst pulls grounded evidence. Compliance Auditor cites the controlled framework.
-3. After the exchange: "And here's what makes this useful. The Compliance Officer agent surfaces what just happened in real-world terms." Trigger the Compliance Officer.
-4. Compliance Officer cites the framework section. Close with: "If this were a real enterprise rollout, every employee would walk through scenarios like this. They would get a readiness signal from the Manager Insights view, and the gaps would be specific: 'EMP-001 needs more practice on vendor risk under SOC2 CC9.2.'"
+2. Let one full exchange play out. The suspect responds in character. Optionally ask a follow-up Forensic Analyst question to surface a grounded citation from the generated scenario's evidence graph.
+3. Trigger the closing. Click ⚖️ **Accuse** → pick a suspect. "And here's where it lands. The Compliance Officer agent reviews the case, surfaces the framework lesson, and cites the controls that were implicated."
+4. Let the Compliance Officer's response stream. Notice the framework citations in the body and the source attachments in the side panel.
+5. Land the close: "This is what compliance training feels like when reasoning agents are good enough to gamify it. The framework lesson sticks because the player just earned it. The natural next step is a Manager Insights view on top of this: 'EMP-001 needs more practice on vendor risk under SOC 2 CC9.2.' Specific, evidence-backed, generated from the play."
 
 Target: 3 to 4 minutes.
 
@@ -98,7 +103,7 @@ Target: 3 to 4 minutes.
 
 One line. Pick one of:
 
-- "What I'd build next is a Manager Insights dashboard that aggregates readiness across an entire workforce. The Fabric IQ semantic model is already there. The visualization is the missing piece."
+- "What I'd build next is a Manager Insights dashboard that aggregates readiness across an entire workforce — the agent activity log already captures the right signals, the visualization is the missing piece."
 - "What surprised me most was how much the role-play framing changed the reasoning quality. Asking an agent 'as the Forensic Analyst, what do you think' produces more useful output than asking 'analyze this evidence' directly."
 - "If you take one thing away: enterprise training is the most boring AI application nobody's done well yet. There's a real opportunity for whoever cracks the gamification."
 
@@ -176,14 +181,14 @@ The day before the live battle, do a full integration test pass. This is the mos
 
 - [ ] Foundry project deployed and reachable
 - [ ] Model Router deployment healthy
-- [ ] Claude Sonnet 4.5 and Haiku 4.5 deployments healthy in the Foundry resource
-- [ ] Foundry IQ index populated with synthetic policy documents
+- [ ] gpt-4.1-mini deployment healthy in the Foundry resource
+- [ ] Foundry IQ index (`compliance-content-index`) populated with synthetic policy documents
 
 ### Application
 
 - [ ] Default Helix Dynamics scenario loaded
 - [ ] Backup scenarios (`helix_dynamics_supplychain.json`, `helix_dynamics_vishing.json`) verified end-to-end
-- [ ] Chainlit UI running on a dedicated tab (`chainlit run app.py -w`)
+- [ ] Chainlit UI running on a dedicated tab (`chainlit run app.py` — no `-w` for live demo)
 - [ ] Live activity log tailing in a second terminal (`.\scripts\tail_activity.ps1 -Clear`)
 - [ ] Second Chainlit tab pre-warmed as backup
 
