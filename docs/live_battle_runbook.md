@@ -27,7 +27,7 @@ These minute marks are estimates based on Battle 2. Adjust to host pacing on the
 | Slot | Approx. minute | Duration | What Lee shows |
 |---|---|---|---|
 | Pre-roll bio | 10-12 | 60 seconds | One-line pitch, hint at the surprise |
-| Architecture intro | 18-22 | 3-4 minutes | Diagram, agent topology, Foundry IQ retrieval grounding, tee up Scenario Generator |
+| Architecture intro | 18-23 | 4-5 minutes | Topology, Foundry IQ retrieval grounding, optional code tour (`src/agents/_azure_client.py`, `_search_client.py`, `scenario_generator.py`), tee up Scenario Generator |
 | Check-in #1 | 30-35 | 3-4 minutes | Evidence picker beat, Forensic Analyst grounded retrieval with sources panel, suspect contrast |
 | Check-in #2 | 43-48 | 3-4 minutes | The wow moment: Scenario Generator builds the host-thrown breach into a new case |
 | Final reveal | 51-56 | 3-4 minutes | Live interrogation of the generated scenario, Compliance Officer surfaces the lesson |
@@ -52,7 +52,9 @@ If the host asks a different question, answer it directly and keep the substance
 3. The reasoning showcase. "All agents run on gpt-4.1-mini routed through Foundry's Model Router. The Forensic Analyst and Compliance Officer ground their responses through Foundry IQ — an Azure AI Search index with 52 chunks across SOC 2, HIPAA, ISO 27001, NIST 800-53, plus the fictional biotech's internal policies. The activity log on screen shows every retrieval with its source filename and relevance score, so you can see the trust loop close in real time."
 4. The tee-up. "I'm going to run the default scenario in a moment, but the part I'm most excited for is when the hosts throw me a new breach. Watch the Scenario Generator write a brand-new case in real time, then watch the player play it."
 
-Target: 3 to 3.5 minutes. Do not exceed 4.
+**Optional code walkthrough beat (2-3 min):** if you want to spend airtime showing Foundry capabilities in code, switch share to VS Code and walk through three files: `_azure_client.py` (Entra ID auth, no API keys), `_search_client.py` (Foundry IQ retrieval as a typed Azure AI Search query), and `scenario_generator.py` (structured generation with validation retry loop). Detailed beats + narration in [`stream_day_cheatsheet.md`](./stream_day_cheatsheet.md) Appendix A.
+
+Target: 4 to 5 minutes if code walkthrough included, 3 to 3.5 minutes if not.
 
 ## Slot 2: Check-in #1 (minute 30-35)
 

@@ -61,7 +61,8 @@ python -m src.orchestrator
 
 - **Primary share:** the Chainlit browser tab
 - **Secondary visible:** Terminal A (activity log scrolling)
-- The audience sees both. The UI tells the story; the log proves it's real.
+- **Switch share to VS Code** briefly during Slot 1 for the code walkthrough (Ctrl+B to hide the sidebar, Ctrl+= to bump font size if needed). Keep the agent files pre-opened in tabs so navigation is one click.
+- The audience sees both. The UI tells the story; the log proves it's real; the code shows depth.
 
 ---
 
@@ -73,13 +74,28 @@ python -m src.orchestrator
 
 ## Per-Slot Talking Points
 
-### Slot 1 — Architecture Intro (3-4 min)
+### Slot 1 — Architecture Intro + Foundry Code Tour (4-5 min)
+
+**Two halves:** (1) topology in plain language, then (2) switch share to VS Code and show three specific Foundry capabilities in code. The code half is what separates this from a typical "I built an agent demo" pitch.
+
+**Half 1 — Topology (1.5-2 min):**
 
 - Premise: Helix Dynamics, biotech, lost 14 GB of clinical trial data overnight
 - 4 party agents (GM, Forensic Analyst, Compliance Officer, Scenario Generator) + 5 suspects per scenario
 - Microsoft Foundry Agent Service + Azure OpenAI gpt-4.1-mini + Azure AI Search agentic retrieval
 - 52 chunks indexed: SOC 2, HIPAA, ISO 27001, NIST 800-53, + fictional Helix Dynamics policies
-- Tee up the Scenario Generator wow moment
+
+**Half 2 — Foundry capabilities in code (2-3 min). Switch share to VS Code.**
+
+*Beat 1 — Auth: no API keys (20-30s).* Open `src/agents/_azure_client.py`, scroll to `build_azure_client()`. Narrate: *"Authentication is just Entra ID via DefaultAzureCredential. No API keys, no secret rotation, no .env-with-secrets sitting in a repo somewhere. The same `az login` that authorizes the Azure CLI is what authorizes every agent call. That's the Foundry promise: enterprise-grade auth becomes the default, not an upgrade."*
+
+*Beat 2 — Foundry IQ retrieval (30-45s).* Open `src/agents/_search_client.py`, scroll to `retrieve_context()`. Narrate: *"Foundry IQ is just a typed query against an Azure AI Search index. Roughly five lines of business logic: search the index, return ranked snippets with scores and source URLs. The Forensic Analyst and Compliance Officer call this BEFORE they call the model. That's why citations stay grounded in real policy text — the model doesn't have to remember what SOC 2 CC6.1 says, the index hands it the relevant chunk first."*
+
+*Beat 3 — Structured generation with validation retry (45-60s).* Open `src/agents/scenario_generator.py`, scroll to `_build_validation_retry_message()` and the surrounding outer loop. Narrate: *"Generated structured output isn't always valid. The model sometimes produces scenarios with two perpetrators, or four red herrings, or missing a required field. So I wrap the generate call in a validation retry loop — the loader checks the structure, and if it fails, I feed the specific error back to the model as corrective feedback for the next attempt. That's defensive engineering on top of Foundry's structured generation. It's what makes the hot-loaded scenarios you'll see in Slot 3 actually safe to play through."*
+
+**Switch back to Chainlit. Tee up Slot 2:** *"That's the engine. Now let me show you what the player actually sees — starting with grounded retrieval running live."*
+
+Target: 4-5 minutes. Do not exceed 5.
 
 ### Slot 2 — Default Scenario Interrogation (3-4 min)
 
@@ -160,3 +176,29 @@ Pick one based on what landed best during the demo:
 3. Post on LinkedIn within 24 hours with a short clip
 4. Send Lee Stott and Carlotta a thank-you
 5. Brief Nick Scott and Greg Tselikis with stream highlights for client conversations
+
+---
+
+## Appendix A — Code Walkthrough Quick Reference
+
+Keep these three files open in VS Code tabs before going live. During Slot 1's code half, you'll switch share to VS Code and walk through them in order. Pre-position your cursor at the function indicated so Ctrl+G is one keystroke and the audience never sees you scrolling.
+
+| Beat | File | What to land on | What to narrate (one line) |
+|---|---|---|---|
+| Auth | `src/agents/_azure_client.py` | `build_azure_client()` function | *"Entra ID via DefaultAzureCredential. The same `az login` authorizes every agent."* |
+| Retrieval | `src/agents/_search_client.py` | `retrieve_context()` function | *"Foundry IQ is a typed query against Azure AI Search. Ranked snippets with scores. Five lines."* |
+| Validation retry | `src/agents/scenario_generator.py` | `_build_validation_retry_message()` plus the surrounding outer for-loop | *"Structured generation isn't always valid. So I feed validation errors back to the model as corrective feedback."* |
+
+**Foundry capabilities each beat showcases:**
+
+- **Beat 1 (auth):** Entra ID integration, no API keys, single sign-on across CLI and agents
+- **Beat 2 (retrieval):** Foundry IQ agentic retrieval pattern, Azure AI Search with relevance scoring, RBAC-based index access
+- **Beat 3 (validation retry):** Foundry's streaming + structured generation + the defensive engineering pattern that makes it production-safe
+
+**Mechanical reminders:**
+
+- VS Code zoom: `Ctrl + =` to enlarge text for the audience. Bump to font size 18-20 before going live.
+- Hide the sidebar: `Ctrl + B`. Maximizes the code area.
+- Minimap and breadcrumbs OFF (View menu). Less visual noise on stream.
+- Open the three files BEFORE going live so they're in your recent-files list (Ctrl+P then arrow keys is fast).
+- If you get lost mid-tour, fall back to: *"All of this is in the public repo — github.com/lwhieldon/msft-enterprise-learning-agent — link in the closing slide."*
