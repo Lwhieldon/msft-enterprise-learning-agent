@@ -149,7 +149,7 @@ This is the actual format the hosts will run. Three rotating 5-minute Q&A rounds
 
 *0:00 — 0:45 — Forensic Analyst grounded retrieval.* Type into chat (no suspect picked):
 
-> *Walk me through HD-SEC-AC-001 §4.1 and which evidence items show controls were bypassed.*
+> *Walk me through Vendor Management Policy Document and which evidence items show controls were bypassed.*
 
 While the response streams, narrate: *"The Forensic Analyst is grounding this in five real policy chunks. Watch the side panel — those are the actual files from the index, with relevance scores. The activity log on the right just showed `[Foundry IQ] Retrieved 5 sources`. That's how the citation trail closes in real time."*
 
