@@ -99,7 +99,7 @@ This is the actual format the hosts will run. Three rotating 5-minute Q&A rounds
 
 **The 5-minute structure:**
 
-*0:00 — 0:30 — Name the challenge and your one-sentence pitch.* Carlotta will have just introduced the 2 official challenges. Cleanly name which one you picked, then your hook: *"I chose [CHALLENGE NAME]. I built Compliance Academy: a multi-agent cyber-mystery game where the player is a lead investigator at a fictional biotech that just lost 14 GB of clinical trial data. Five suspects, one perpetrator, and at the end a Compliance Officer agent delivers the actual framework lesson the player just lived through."*
+*0:00 — 0:30 — Name the challenge and your one-sentence pitch.* Carlotta will have just introduced the 2 official challenges. Cleanly name which one you picked, then your hook: *"I chose a mix between the reasoning & enterprise challenge - A combo of both!. I built Compliance Academy: a multi-agent cyber-mystery game where the player is a lead investigator at a fictional biotech that just lost 14 GB of clinical trial data. Five suspects, one perpetrator, and at the end a Compliance Officer agent delivers the actual framework lesson the player just lived through."*
 
 *0:30 — 1:30 — Why this approach.* *"Compliance training is the most boring AI application that nobody's done well yet. Click-through PDFs, multiple-choice quizzes, no retention. I wanted to test whether reasoning agents are good enough to gamify it. The bet: if the player has to interrogate suspects and reason about evidence to find the answer, the framework lesson sticks because they just earned it."*
 
