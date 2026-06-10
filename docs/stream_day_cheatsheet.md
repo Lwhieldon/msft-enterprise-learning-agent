@@ -253,19 +253,64 @@ Pick scenario from the picker on first load, or click 🆕 **Generate** anytime 
 
 ## Appendix A — Code Walkthrough Quick Reference (for Q2)
 
-Keep these three files open in VS Code tabs before going live. During Q2 you'll switch share to VS Code and walk through them in order. Pre-position your cursor at the function indicated so Ctrl+G is one keystroke and the audience never sees you scrolling.
+Three files, three Foundry capabilities. Pre-open all three in VS Code tabs before going live so Ctrl+P jump is one keystroke. Use **Ctrl+G + line number** to navigate, NOT scrolling.
 
-| Beat | File | What to land on | What to narrate (one line) |
-|---|---|---|---|
-| Auth | `src/agents/_azure_client.py` | `build_azure_client()` function | *"Entra ID via DefaultAzureCredential. The same `az login` authorizes every agent."* |
-| Retrieval | `src/agents/_search_client.py` | `retrieve_context()` function | *"Foundry IQ is a typed query against Azure AI Search. Ranked snippets with scores. Five lines."* |
-| Validation retry | `src/agents/scenario_generator.py` | `_build_validation_retry_message()` plus the surrounding outer for-loop | *"Structured generation isn't always valid. So I feed validation errors back to the model as corrective feedback."* |
+### Beat 1 — Auth: `src/agents/_azure_client.py`
 
-**Foundry capabilities each beat showcases:**
+**Function:** `build_azure_client()`
+**Navigate to:** `Ctrl+G` → **line 108** (function declaration)
+**Show on screen:** lines **108-150** (whole function fits on one screen at font 18-20)
+**Where to land cursor:** **line 138** (the body, past the docstring)
 
-- **Beat 1 (auth):** Entra ID integration, no API keys, single sign-on across CLI and agents
-- **Beat 2 (retrieval):** Foundry IQ agentic retrieval pattern, Azure AI Search with relevance scoring, RBAC-based index access
-- **Beat 3 (validation retry):** Foundry's streaming + structured generation + the defensive engineering pattern that makes it production-safe
+Key lines to draw attention to as you narrate:
+
+| Line | What it shows |
+|---|---|
+| 138-139 | `project_endpoint = require_env("AZURE_AI_PROJECT_ENDPOINT")` — endpoint from env, no secret |
+| **141-144** | `token_provider = get_bearer_token_provider(DefaultAzureCredential(), ...)` — **THE auth moment** |
+| 146-150 | `return AzureOpenAI(azure_endpoint=..., azure_ad_token_provider=token_provider, ...)` — no `api_key=` argument anywhere |
+
+Narration anchor: *"Look at lines 141-144. That's the bearer token provider. The same `az login` that authorizes my Azure CLI is what authorizes every agent call. Enterprise-grade auth becomes the default, not an upgrade."*
+
+---
+
+### Beat 2 — Retrieval: `src/agents/_search_client.py`
+
+**Function:** `retrieve_context()`
+**Navigate to:** `Ctrl+G` → **line 153** (function declaration)
+**Show on screen:** lines **190-214** (skip the long docstring at lines 159-185)
+**Where to land cursor:** **line 194** (the `try: results = client.search(...)` block)
+
+Key lines to draw attention to:
+
+| Line | What it shows |
+|---|---|
+| **194-199** | `client.search(search_text=..., top=top_k, select=[...])` — **the entire Foundry IQ call** |
+| 198 | `select=[FIELD_UID, FIELD_SNIPPET, FIELD_BLOB_URL, FIELD_PARENT_ID]` — typed field selection |
+| 205-214 | dict construction returning `uid`, `snippet`, `source_url`, `parent_id`, `score` — ranked output with relevance |
+
+Narration anchor: *"Look at lines 194-199. That's the entire search call — query string, top-k, and the fields I want back. Five lines. The Forensic Analyst and Compliance Officer call this BEFORE they call the model. That's why citations stay grounded in real policy text."*
+
+---
+
+### Beat 3 — Validation retry: `src/agents/scenario_generator.py`
+
+**Function:** `_build_validation_retry_message()`
+**Navigate to:** `Ctrl+G` → **line 196** (function declaration)
+**Show on screen:** lines **213-237** (the return statement that builds the corrective message)
+**Where to land cursor:** **line 224** (the "Important - your previous scenario attempt failed" line)
+
+Key lines to draw attention to:
+
+| Line | What it shows |
+|---|---|
+| 224-225 | `"Important - your previous scenario attempt failed loader validation with the following error:\n\n"` — the framing |
+| **226** | `f"  {validation_error}\n\n"` — **the validation error gets f-string'd back into the next prompt** |
+| 227-232 | explicit guidance about red herrings and perpetrator counts — the most common failure mode, called out by name |
+
+Narration anchor: *"Look at line 226. That f-string takes the actual validation error from the loader and embeds it back into the next user message as corrective feedback. The model literally sees its previous mistake and tries again with that constraint. The outer for loop driving this lives in `generate_scenario` around line 430 — `Ctrl+F` for `for validation_attempt in range` if anyone asks to see it — but the corrective message construction is where the trick is."*
+
+---
 
 **Mechanical reminders:**
 
