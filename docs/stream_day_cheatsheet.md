@@ -103,7 +103,7 @@ This is the actual format the hosts will run. Three rotating 5-minute Q&A rounds
 
 *0:30 — 1:30 — Why this approach.* *"Compliance training is the most boring AI application that nobody's done well yet. Click-through PDFs, multiple-choice quizzes, no retention. I wanted to test whether reasoning agents are good enough to gamify it. The bet: if the player has to interrogate suspects and reason about evidence to find the answer, the framework lesson sticks because they just earned it."*
 
-*1:30 — 3:30 — Tech stack walkthrough.*
+*1:30 — 3:30 — Tech stack walkthrough.* **Switch share to `docs/foundry_tech_stack.html` (open in browser, F11 for fullscreen)** so the audience sees the architecture as you narrate it. Walk top-to-bottom through the diagram:
 - **Microsoft Foundry Agent Service** with the **Connected Agents** pattern. Four party agents (Game Master, Forensic Analyst, Compliance Officer, Scenario Generator) plus five suspect agents per scenario.
 - **Azure OpenAI gpt-4.1-mini** routed through Foundry's **Model Router** — one endpoint, automatic model selection, no per-model deployment juggling.
 - **Azure AI Search** as the **Foundry IQ** retrieval index — 52 chunks across SOC 2, HIPAA, ISO 27001, NIST 800-53, plus the fictional biotech's internal policies.
@@ -143,30 +143,49 @@ This is the actual format the hosts will run. Three rotating 5-minute Q&A rounds
 
 **Hosts ask:** *"Can you showcase a brief demo of what you've built so far? Any plans on how to evolve it?"*
 
-**On screen:** Chainlit UI with Default scenario already loaded from your T-30 setup.
+**On screen:** Chainlit UI with the Default Helix Dynamics scenario already loaded from your T-30 setup. Briefing panel visible.
 
-**The 5-minute structure — one tight demo flow, then evolution plans:**
+**The 5-minute structure — play one scenario end-to-end, then evolution plans:**
 
-*0:00 — 0:45 — Grounded retrieval beat.* The Default Helix Dynamics scenario is already loaded. Type into chat (no suspect picked): *"Walk me through HD-SEC-AC-001 §4.1 and which evidence items show controls were bypassed."* While the Forensic Analyst streams its response, narrate: *"Forensic Analyst is grounding this in 5 real policy chunks. Watch the side panel — those are the actual files from the index. The activity log on the right shows the retrieval timing."*
+*0:00 — 0:45 — Forensic Analyst grounded retrieval.* Type into chat (no suspect picked):
 
-*0:45 — 1:00 — Tee up the Generate moment.* *"Now let's see if this works on a scenario nobody designed in advance."* Click 🆕 **Generate**.
+> *Walk me through HD-SEC-AC-001 §4.1 and which evidence items show controls were bypassed.*
 
-*1:00 — 1:15 — Paste the host's breach.* If Carlotta or Lee Stott gave a breach description in their intro, paste that. Otherwise use this fallback: *"A contractor's stolen laptop with cached HelixVault credentials is used to exfiltrate IRB submission documents over 48 hours from a hotel network."*
+While the response streams, narrate: *"The Forensic Analyst is grounding this in five real policy chunks. Watch the side panel — those are the actual files from the index, with relevance scores. The activity log on the right just showed `[Foundry IQ] Retrieved 5 sources`. That's how the citation trail closes in real time."*
 
-*1:15 — 3:00 — While Generate runs (typically 10-30s, can be up to 90s).* Narrate the activity log: *"Scenario Generator is composing the new case right now. Five suspects with backstories, an evidence graph, six controls implicated, a mapped compliance lesson. If you watch the log, you can see the validation retry loop kick in if the first attempt doesn't parse cleanly — self-correcting on structured output is the engineering moat."* When the scenario hot-loads, briefly point out the new premise.
+*0:45 — 2:00 — Interrogate Suspect #1: Casey Doyle (the phishing victim).* Click 👥 **Suspects** → **Casey Doyle**. Type:
 
-*3:00 — 4:00 — Run one interrogation and close the case.* Click 👥 **Suspects** → pick one (whoever the validation report flagged as perpetrator or red herring). Ask one quick probing question. Then click ⚖️ **Accuse** → pick a suspect. The Compliance Officer streams the closer with framework citations. Narrate: *"The Compliance Officer is the post-mortem. It cites the specific controls that were violated and ties them to the framework section. The framework lesson sticks because the player just earned it."*
+> *Tell me about emails you received Sunday night before the incident.*
+
+While Casey responds, narrate: *"Notice the side panel didn't attach this time. Suspect agents are a different pattern — persona-driven prompts with backstory, alibi, and leak conditions. Same Foundry Agent Service, completely different role."*
+
+If time permits, follow up with:
+
+> *Did you notice anything unusual about your laptop after that industry conference?*
+
+*2:00 — 3:15 — Interrogate Suspect #2: Riley Park (the perpetrator).* Click 👥 **Suspects** → **Riley Park**. Type:
+
+> *Walk me through your vendor access workflow on the night of the breach.*
+
+Narrate during the response: *"Riley is the third-party vendor in this scenario — their access pattern is the angle the player needs to probe. Watch how the persona stays in character without leaking the answer."*
+
+If time permits, push harder:
+
+> *Were you logged into HelixVault between 11 PM Sunday and 3 AM Monday?*
+
+*3:15 — 4:00 — Accuse Riley Park, Compliance Officer closes the case.* Click ⚖️ **Accuse** → select **Riley Park**. While the Compliance Officer streams its closer, narrate: *"This is the framework moment. Compliance Officer is grounded in the same Foundry IQ index as the Forensic Analyst — watch the sources panel attach again. It's citing the specific controls that were violated, tying them to SOC 2 CC6.1 and the internal access policy. The framework lesson sticks because the player just earned it."*
 
 *4:00 — 4:45 — Evolution plans.* Pick the one that lands best in the moment:
 - *"What I'd build next is a Manager Insights dashboard that aggregates readiness across an entire workforce — every scene the player runs becomes a training signal. 'EMP-001 needs more practice on vendor risk under SOC 2 CC9.2.' Evidence-backed, specific, generated from play."*
+- *"I also have a Scenario Generator agent that can hot-load a brand new case from any breach description — you saw that file in Q2 with the validation retry loop. The natural next step is letting an instructor or compliance lead drop in a real incident and have the system build a teaching scenario around it."*
 - *"What surprised me most was how the role-play framing changed the reasoning quality. Asking an agent 'as the Forensic Analyst, what do you think' produces more useful output than asking 'analyze this evidence' directly. There's something worth studying in personification-as-prompt-engineering."*
 - *"Enterprise compliance training is the most boring AI application nobody's done well yet. Whoever cracks the gamification owns a real category."*
 
 *4:45 — 5:00 — Close and hand back.* *"That's Compliance Academy. Hand back to you, Carlotta."*
 
-**If Generate is slow (past 60s):** narrate the retry loop *"...you can see the validation retry firing in the log, the model is self-correcting..."* until it completes. If it goes past 90s and still nothing, fall back to a pre-built scenario (`helix_dynamics_supplychain.json`) and pivot: *"While that's still cooking, let me show you a scenario the generator pre-built earlier."*
+**If a suspect gives an unexpectedly short or evasive response:** that's actually a good moment, not a problem. Narrate it: *"Notice how Riley is staying in character and not just confessing — that's the persona-driven pattern doing its job. The player has to triangulate across multiple suspects and the evidence to find the answer."* Then move on to the next beat. Don't try to coax a longer response.
 
-**If Generate fails entirely:** load `helix_dynamics_default.json` from the picker and run the Slot 4 path (interrogation → accuse → CO closer) on the pre-built scenario. Audience will not know the difference.
+**If the Forensic Analyst question doesn't surface the sources panel:** the call may still be streaming. Wait 5 more seconds. If it lands without sources, narrate the response normally and pivot to the suspects — don't dwell on the missing panel.
 
 ---
 
