@@ -1,7 +1,6 @@
 # Live Battle Runbook
 
-> **For day-of reference, use [`stream_day_cheatsheet.md`](./stream_day_cheatsheet.md) — it's the one-page laser-focused version of this doc with the right commands and laser-focused slot prompts.**
-> **This runbook is the longer background doc: minute-mark map, pre-roll bio, full slot scripts, and pre-stream checklist.**
+> **Format update (June 9 host email):** the actual session is **three rotating 5-minute Q&A rounds** (~15 min airtime), NOT the continuous 4-slot demo originally planned. Use [`stream_day_cheatsheet.md`](./stream_day_cheatsheet.md) as the day-of reference — it has the Q1/Q2/Q3 structure with prep-able answers for each question. This runbook is now background context (bio, format reality, fallback plans) plus the original slot scripts as historical reference.
 
 **Event:** Agents League Post Build edition, Reasoning Agents Live Streaming Battle
 **Date:** June 10, 2026, 12:00 PM EST (9:00 AM PT)
@@ -20,18 +19,21 @@ Total broadcast: approximately 1 hour. From the prior Battle 2 broadcast (Feb 20
 
 Each competitor gets four short slots totaling 12 to 15 minutes of airtime. The work happens in background while hosts cut between competitors. Lee's job is to be ready with a concrete deliverable at each checkpoint.
 
-## Lee's Airtime Map
+## Lee's Airtime Map (Updated from June 9 host email)
 
-These minute marks are estimates based on Battle 2. Adjust to host pacing on the day.
+Three rotating 5-minute Q&A rounds. Hosts ask the same question to each competitor in turn before moving to the next question. You're on camera 5 minutes at a time, three times, totaling ~15 minutes.
 
-| Slot | Approx. minute | Duration | What Lee shows |
+| Block | Approx. minute | Duration | What |
 |---|---|---|---|
-| Pre-roll bio | 10-12 | 60 seconds | One-line pitch, hint at the surprise |
-| Architecture intro | 18-23 | 4-5 minutes | Topology, Foundry IQ retrieval grounding, optional code tour (`src/agents/_azure_client.py`, `_search_client.py`, `scenario_generator.py`), tee up Scenario Generator |
-| Check-in #1 | 30-35 | 3-4 minutes | Evidence picker beat, Forensic Analyst grounded retrieval with sources panel, suspect contrast |
-| Check-in #2 | 43-48 | 3-4 minutes | The wow moment: Scenario Generator builds the host-thrown breach into a new case |
-| Final reveal | 51-56 | 3-4 minutes | Live interrogation of the generated scenario, Compliance Officer surfaces the lesson |
-| Reflection | 58-59 | 30-60 seconds | One line: what comes next |
+| Pre-roll: Agents League intro | 0-5 | 5 minutes | Host-led, you don't speak |
+| Pre-roll: 2 challenge scenarios intro | 5-7 | 2 minutes | Carlotta introduces — listen for which challenge applies to you |
+| **Q1 round (all competitors): challenge + tech stack** | 7-22 | 5 min each | Your slot is one of these three |
+| **Q2 round (all competitors): code walkthrough** | 22-37 | 5 min each | Foundry capability tour |
+| **Q3 round (all competitors): demo + evolution** | 37-52 | 5 min each | Live demo + what's next |
+| Wrap-up + CTAs | 52-55 | 3 min | Host-led, have your CTAs ready |
+| Audience Q&A | 55-60 | 5 min | Anticipated questions pre-loaded in cheatsheet |
+
+**The original 4-slot continuous-demo airtime map (Slot 1 → Slot 4 below) is preserved as background but is not the day-of structure.** The slot scripts contain useful narrative beats that have been consolidated into the cheatsheet's Q1/Q2/Q3 sections.
 
 ## Pre-Roll Bio (60 seconds)
 

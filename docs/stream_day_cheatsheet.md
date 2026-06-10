@@ -13,13 +13,20 @@ This is the laser-focused one-page reference for stream day. For the full runboo
 ```powershell
 cd C:\Users\lwhieldon\msft-enterprise-learning-agent
 .\.venv\Scripts\Activate.ps1
+echo $env:REQUESTS_CA_BUNDLE     # MUST show C:\Users\lwhieldon\corp-ca-bundle.pem
 az login
-az account show     # confirm SC&H Foundry subscription is active
-pytest              # unit tests should all pass, runs in seconds
-python -m src.scenario_loader   # three OK lines, no Azure call
+az account show                  # confirm SC&H Foundry subscription is active
+pytest                           # unit tests should all pass, runs in seconds
+python -m src.scenario_loader    # three OK lines, no Azure call
 ```
 
-If anything in the block above fails, fix it before going live. Re-running `az login` resolves 95% of issues.
+**If `REQUESTS_CA_BUNDLE` is empty:** Netskope will block `az login` with a self-signed certificate error. Set it for the session before continuing:
+
+```powershell
+$env:REQUESTS_CA_BUNDLE = "C:\Users\lwhieldon\corp-ca-bundle.pem"
+```
+
+If anything else in the block above fails, fix it before going live. Re-running `az login` resolves 95% of the rest.
 
 ---
 
@@ -61,76 +68,132 @@ python -m src.orchestrator
 
 - **Primary share:** the Chainlit browser tab
 - **Secondary visible:** Terminal A (activity log scrolling)
-- **Switch share to VS Code** briefly during Slot 1 for the code walkthrough (Ctrl+B to hide the sidebar, Ctrl+= to bump font size if needed). Keep the agent files pre-opened in tabs so navigation is one click.
+- **Switch share to VS Code** during Q2 for the code walkthrough (Ctrl+B to hide the sidebar, Ctrl+= to bump font size if needed). Keep the agent files pre-opened in tabs so navigation is one click.
 - The audience sees both. The UI tells the story; the log proves it's real; the code shows depth.
 
 ---
 
-## Opening Framing (45 seconds)
+## Session Flow (from Carlotta's email)
 
-> "I'm Lee Whieldon, Principal at SC&H Group. I built Compliance Academy: a multi-agent cyber-mystery game on Microsoft Foundry Agent Service. You play a lead investigator at a fictional biotech that just lost 14 GB of clinical trial data. Five suspects, one perpetrator, and at the end a Compliance Officer agent delivers the actual framework lesson the player just lived through. What you'll see on screen is the Chainlit UI on the left and the live agent orchestration log on the right. The log is how I prove the agents are actually reasoning, retrieving from a policy index, and not just dressing up a single prompt. If anything goes sideways, I've got a CLI orchestrator running in a third terminal that talks to the same agents — that's my engineering backup."
+This is the actual format the hosts will run. Three rotating 5-minute Q&A rounds: hosts ask the same question to each competitor in turn before moving to the next question. You're on camera for 5 minutes at a time, three times, totaling ~15 minutes of airtime. Hosts will bounce to other competitors between your slots.
+
+| Block | Time | Who | What |
+|---|---|---|---|
+| Intro to Agents League | 5 min | Carlotta & Lee Stott | Host-led event intro |
+| Intro to the 2 challenge scenarios | 2 min | Carlotta | Host introduces the official challenges — **listen carefully so you can name yours in Q1** |
+| **Q1: Which challenge did you choose + tech stack** | 5 min each | You | Your turn comes when hosts cycle to you |
+| **Q2: Code/details walkthrough** | 5 min each | You | The Foundry code tour (see Appendix A) |
+| **Q3: Demo + plans to evolve it** | 5 min each | You | Live demo + closing reflection on what's next |
+| Wrap-up and CTAs | 3 min | Hosts (you contribute) | Have your CTAs ready (see below) |
+| Q&A margin | ~5 min | Audience | Be ready for the likely questions (see below) |
+
+**Total airtime for you: ~15 minutes across three slots.** Each slot is hard-capped at 5 minutes — hosts will cut you to move to the next competitor. Practice each slot at the 4:30 mark so you have buffer for transitions.
 
 ---
 
-## Per-Slot Talking Points
+## Q1 — Challenge Choice + Tech Stack (5 min)
 
-### Slot 1 — Architecture Intro + Foundry Code Tour (4-5 min)
+**Hosts ask:** *"Which challenge did you choose and which approach/tech stack did you choose to address it?"*
 
-**Two halves:** (1) topology in plain language, then (2) switch share to VS Code and show three specific Foundry capabilities in code. The code half is what separates this from a typical "I built an agent demo" pitch.
+**On screen:** Hero banner / GitHub README (visual identity). Switch from this to architecture talking points at minute 2.
 
-**Half 1 — Topology (1.5-2 min):**
+**The 5-minute structure:**
 
-- Premise: Helix Dynamics, biotech, lost 14 GB of clinical trial data overnight
-- 4 party agents (GM, Forensic Analyst, Compliance Officer, Scenario Generator) + 5 suspects per scenario
-- Microsoft Foundry Agent Service + Azure OpenAI gpt-4.1-mini + Azure AI Search agentic retrieval
-- 52 chunks indexed: SOC 2, HIPAA, ISO 27001, NIST 800-53, + fictional Helix Dynamics policies
+*0:00 — 0:30 — Name the challenge and your one-sentence pitch.* Carlotta will have just introduced the 2 official challenges. Cleanly name which one you picked, then your hook: *"I chose [CHALLENGE NAME]. I built Compliance Academy: a multi-agent cyber-mystery game where the player is a lead investigator at a fictional biotech that just lost 14 GB of clinical trial data. Five suspects, one perpetrator, and at the end a Compliance Officer agent delivers the actual framework lesson the player just lived through."*
 
-**Half 2 — Foundry capabilities in code (2-3 min). Switch share to VS Code.**
+*0:30 — 1:30 — Why this approach.* *"Compliance training is the most boring AI application that nobody's done well yet. Click-through PDFs, multiple-choice quizzes, no retention. I wanted to test whether reasoning agents are good enough to gamify it. The bet: if the player has to interrogate suspects and reason about evidence to find the answer, the framework lesson sticks because they just earned it."*
 
-*Beat 1 — Auth: no API keys (20-30s).* Open `src/agents/_azure_client.py`, scroll to `build_azure_client()`. Narrate: *"Authentication is just Entra ID via DefaultAzureCredential. No API keys, no secret rotation, no .env-with-secrets sitting in a repo somewhere. The same `az login` that authorizes the Azure CLI is what authorizes every agent call. That's the Foundry promise: enterprise-grade auth becomes the default, not an upgrade."*
+*1:30 — 3:30 — Tech stack walkthrough.*
+- **Microsoft Foundry Agent Service** with the **Connected Agents** pattern. Four party agents (Game Master, Forensic Analyst, Compliance Officer, Scenario Generator) plus five suspect agents per scenario.
+- **Azure OpenAI gpt-4.1-mini** routed through Foundry's **Model Router** — one endpoint, automatic model selection, no per-model deployment juggling.
+- **Azure AI Search** as the **Foundry IQ** retrieval index — 52 chunks across SOC 2, HIPAA, ISO 27001, NIST 800-53, plus the fictional biotech's internal policies.
+- **Entra ID** auth via DefaultAzureCredential — no API keys anywhere in the codebase.
+- **Chainlit** for the player-facing UI plus a **live activity log terminal** that streams every retrieval and every model call in real time.
 
-*Beat 2 — Foundry IQ retrieval (30-45s).* Open `src/agents/_search_client.py`, scroll to `retrieve_context()`. Narrate: *"Foundry IQ is just a typed query against an Azure AI Search index. Roughly five lines of business logic: search the index, return ranked snippets with scores and source URLs. The Forensic Analyst and Compliance Officer call this BEFORE they call the model. That's why citations stay grounded in real policy text — the model doesn't have to remember what SOC 2 CC6.1 says, the index hands it the relevant chunk first."*
+*3:30 — 4:30 — Why these specific choices.* *"Foundry isn't just OpenAI behind an Azure URL. The Connected Agents pattern, Model Router, and Foundry IQ retrieval are what make this a multi-agent system instead of a fancy chatbot. The activity log is how I prove that on stream — every Foundry IQ retrieval and every Azure OpenAI call shows up with its source filename and relevance score. The trust loop closes on screen."*
 
-*Beat 3 — Structured generation with validation retry (45-60s).* Open `src/agents/scenario_generator.py`, scroll to `_build_validation_retry_message()` and the surrounding outer loop. Narrate: *"Generated structured output isn't always valid. The model sometimes produces scenarios with two perpetrators, or four red herrings, or missing a required field. So I wrap the generate call in a validation retry loop — the loader checks the structure, and if it fails, I feed the specific error back to the model as corrective feedback for the next attempt. That's defensive engineering on top of Foundry's structured generation. It's what makes the hot-loaded scenarios you'll see in Slot 3 actually safe to play through."*
+*4:30 — 5:00 — Tee up Q2.* *"In the next round I'll switch to the actual code so you can see exactly how this is wired — about 60 lines of Python is what stands between you and a production-ready agentic retrieval system on Foundry."*
 
-**Switch back to Chainlit. Tee up Slot 2:** *"That's the engine. Now let me show you what the player actually sees — starting with grounded retrieval running live."*
+---
 
-Target: 4-5 minutes. Do not exceed 5.
+## Q2 — Code & Details Walkthrough (5 min)
 
-### Slot 2 — Default Scenario Interrogation (3-4 min)
+**Hosts ask:** *"Can you walk through the code/share the details of what you are building?"*
 
-**Demo beats in this slot:** (1) grounded FA retrieval with sources, then (2) persona-driven suspect interrogation. Two different agent patterns side by side.
+**On screen:** Switch share from Chainlit to VS Code. Three files pre-opened in tabs (see Appendix A for exact navigation):
+1. `src/agents/_azure_client.py`
+2. `src/agents/_search_client.py`
+3. `src/agents/scenario_generator.py`
 
-- Click 🏥 **Default (Healthcare)** scenario picker on first load
-- Click 🔍 **Evidence** — the audience sees a clean roster of every piece of evidence with a value rating, plus a row of 📄 **EV-NNN** buttons (one per item). Click 📄 **EV-003** (the ServiceNow change request) to surface its full detail as a new message. The picker buttons re-attach to every detail message (with a • marker on the currently-displayed item) so you can jump straight to another piece of evidence without scrolling back. Narrate: *"EV-003 is going to be central — notice Morgan Webb requested the MFA exception three weeks before the breach."*
-- **Open with a Forensic Analyst question (NO suspect picked yet)** — type into the chat: *"Walk me through HD-SEC-AC-001 §4.1 and which evidence items show controls were bypassed."*
-- **Sources panel attaches** — you'll see entries like `[1] access_control_policy.md (score 5.82)`, `[2] helix_dynamics_overview.md (score 4.21)`, `[3] soc2_trust_service_criteria.md (score 3.94)` as side-drawer pills next to the FA's response. Click one to expand the actual snippet for the audience.
-- **Control IDs vs source filenames** — the FA cites control IDs like `HD-SEC-AC-001 §4.1` and `SOC 2 CC6.1` *in the response text*. Those are the policy section identifiers. The source panel shows the *underlying retrieved files* (12 docs in the index: 4 framework files, 4 Helix policies, 3 playbooks, 1 company overview). Different surfaces, same evidence trail.
-- Narrate: *"The activity log just showed `[Foundry IQ] Retrieved N sources` — these aren't training data, they're real chunks pulled from the index in real time. That's how we close the trust loop on compliance content."*
-- Click 👥 **Suspects** → pick **Casey Doyle** (executive assistant, phishing victim)
-- Ask: *"Tell me about emails you received Sunday night before the incident."*
-- Narrate the shift: *"Notice no sources attach here. Suspect agents are a different pattern — persona-driven prompts with backstory, alibis, and leak conditions. Same Foundry Agent Service, completely different role."*
-- Switch to **Riley Park** (the perpetrator in Default), ask: *"Walk me through your vendor access workflow."*
-- Tee up Slot 3: *"Now let's see if we can hot-load a brand new scenario from a one-sentence breach prompt."*
+**The 5-minute structure — three Foundry capability beats:**
 
-**Reminder — which agents attach sources:**
-- ✅ Forensic Analyst (free-text question with no suspect active)
-- ✅ Compliance Officer (after Accuse or Wrap)
-- ❌ Suspects (persona only, no retrieval)
+*0:00 — 0:30 — Set context.* *"I'm going to walk through three Python files that show three distinct Foundry capabilities. Each one is short — the whole agentic retrieval pattern is about 60 lines of business logic."*
 
-### Slot 3 — Scenario Generator Live Build (4 min)
+*0:30 — 1:45 — Beat 1: Auth (no API keys).* Open `src/agents/_azure_client.py`, land on `build_azure_client()`. Narrate: *"Authentication is just Entra ID via DefaultAzureCredential. No API keys, no secret rotation, no .env-with-secrets sitting in a repo somewhere. The same `az login` that authorizes the Azure CLI is what authorizes every agent call. That's the Foundry promise: enterprise-grade auth becomes the default, not an upgrade."*
 
-- Click 🆕 **Generate**
-- Paste the host-supplied breach (or use this if no host prompt): *"A contractor's stolen laptop with cached HelixVault credentials is used to exfiltrate IRB submission documents over 48 hours from a hotel network."*
-- **Timing reality:** the Generator can take 30-90 seconds when validation retries fire. If you're past 60s and the audience looks restless, narrate: *"The Scenario Generator just hit a validation error and is self-correcting — you'll see it retry in the log in a moment."*
-- When the new scenario hot-loads, briefly point out: brand new premise, new suspects with the same canonical cast (Alex, Morgan, Riley, Casey, Jordan), new evidence graph, new compliance lesson
+*1:45 — 3:15 — Beat 2: Foundry IQ retrieval.* Open `src/agents/_search_client.py`, land on `retrieve_context()`. Narrate: *"Foundry IQ retrieval is just a typed query against an Azure AI Search index. Roughly five lines of business logic: search the index, return ranked snippets with scores and source URLs. The Forensic Analyst and Compliance Officer call this BEFORE they call the model. That's why citations stay grounded in real policy text — the model doesn't have to remember what SOC 2 CC6.1 says, the index hands it the relevant chunk first."*
 
-### Slot 4 — Final Reveal + Compliance Officer (3-4 min)
+*3:15 — 4:30 — Beat 3: Structured generation with validation retry.* Open `src/agents/scenario_generator.py`, land on `_build_validation_retry_message()` and the surrounding outer loop. Narrate: *"Generated structured output isn't always valid. The model sometimes produces scenarios with two perpetrators, or four red herrings, or missing a required field. So I wrap the generate call in a validation retry loop — the loader checks the structure, and if it fails, I feed the specific error back to the model as corrective feedback for the next attempt. That's defensive engineering on top of Foundry's streaming + structured generation. It's what makes the hot-loaded scenarios you'll see in the demo actually safe to play through."*
 
-- Run one interrogation in the new scenario
-- Click ⚖️ **Accuse** → pick a suspect
-- Compliance Officer delivers the closer with framework citations and the post-mortem
-- Land the message: *"This is what compliance training feels like when reasoning agents are good enough to gamify it. The framework lesson sticks because the player just earned it."*
+*4:30 — 5:00 — Tee up Q3.* Switch share back to Chainlit. *"In the demo round, you'll see this code actually running. I'll throw the host-supplied breach at the Scenario Generator and we'll watch it build a brand-new compliance case in real time."*
+
+---
+
+## Q3 — Live Demo + Evolution Plans (5 min)
+
+**Hosts ask:** *"Can you showcase a brief demo of what you've built so far? Any plans on how to evolve it?"*
+
+**On screen:** Chainlit UI with Default scenario already loaded from your T-30 setup.
+
+**The 5-minute structure — one tight demo flow, then evolution plans:**
+
+*0:00 — 0:45 — Grounded retrieval beat.* The Default Helix Dynamics scenario is already loaded. Type into chat (no suspect picked): *"Walk me through HD-SEC-AC-001 §4.1 and which evidence items show controls were bypassed."* While the Forensic Analyst streams its response, narrate: *"Forensic Analyst is grounding this in 5 real policy chunks. Watch the side panel — those are the actual files from the index. The activity log on the right shows the retrieval timing."*
+
+*0:45 — 1:00 — Tee up the Generate moment.* *"Now let's see if this works on a scenario nobody designed in advance."* Click 🆕 **Generate**.
+
+*1:00 — 1:15 — Paste the host's breach.* If Carlotta or Lee Stott gave a breach description in their intro, paste that. Otherwise use this fallback: *"A contractor's stolen laptop with cached HelixVault credentials is used to exfiltrate IRB submission documents over 48 hours from a hotel network."*
+
+*1:15 — 3:00 — While Generate runs (typically 10-30s, can be up to 90s).* Narrate the activity log: *"Scenario Generator is composing the new case right now. Five suspects with backstories, an evidence graph, six controls implicated, a mapped compliance lesson. If you watch the log, you can see the validation retry loop kick in if the first attempt doesn't parse cleanly — self-correcting on structured output is the engineering moat."* When the scenario hot-loads, briefly point out the new premise.
+
+*3:00 — 4:00 — Run one interrogation and close the case.* Click 👥 **Suspects** → pick one (whoever the validation report flagged as perpetrator or red herring). Ask one quick probing question. Then click ⚖️ **Accuse** → pick a suspect. The Compliance Officer streams the closer with framework citations. Narrate: *"The Compliance Officer is the post-mortem. It cites the specific controls that were violated and ties them to the framework section. The framework lesson sticks because the player just earned it."*
+
+*4:00 — 4:45 — Evolution plans.* Pick the one that lands best in the moment:
+- *"What I'd build next is a Manager Insights dashboard that aggregates readiness across an entire workforce — every scene the player runs becomes a training signal. 'EMP-001 needs more practice on vendor risk under SOC 2 CC9.2.' Evidence-backed, specific, generated from play."*
+- *"What surprised me most was how the role-play framing changed the reasoning quality. Asking an agent 'as the Forensic Analyst, what do you think' produces more useful output than asking 'analyze this evidence' directly. There's something worth studying in personification-as-prompt-engineering."*
+- *"Enterprise compliance training is the most boring AI application nobody's done well yet. Whoever cracks the gamification owns a real category."*
+
+*4:45 — 5:00 — Close and hand back.* *"That's Compliance Academy. Hand back to you, Carlotta."*
+
+**If Generate is slow (past 60s):** narrate the retry loop *"...you can see the validation retry firing in the log, the model is self-correcting..."* until it completes. If it goes past 90s and still nothing, fall back to a pre-built scenario (`helix_dynamics_supplychain.json`) and pivot: *"While that's still cooking, let me show you a scenario the generator pre-built earlier."*
+
+**If Generate fails entirely:** load `helix_dynamics_default.json` from the picker and run the Slot 4 path (interrogation → accuse → CO closer) on the pre-built scenario. Audience will not know the difference.
+
+---
+
+## Q&A Prep — Anticipated Audience Questions
+
+The last ~5 minutes are open Q&A. Prepare one-liner answers for each so you don't have to think on the fly.
+
+| Question | Your answer |
+|---|---|
+| *"Can this work for other domains besides compliance?"* | *"Yes — the engine is domain-agnostic. Swap the policy index for HR docs, sales playbooks, or product specs and the same Connected Agents pattern works. Compliance was my first target because the framework citations make the grounding test obvious."* |
+| *"How much does a scenario cost to run?"* | *"Each full scene is roughly a few cents of gpt-4.1-mini usage plus negligible Azure AI Search cost. The Scenario Generator is the priciest call (10-20k tokens). For a training rollout the per-employee cost would be well under a dollar per hour of playtime."* |
+| *"How do you handle hallucinations in the compliance content?"* | *"Forensic Analyst and Compliance Officer ground every citation in retrieved policy text. The model writes the narrative; the retrieval determines what facts are available. The activity log shows the retrieved sources by name and score so you can audit each citation."* |
+| *"What about latency — doesn't streaming get slow?"* | *"First token usually 1-3 seconds, full responses 5-15 seconds. Generate is the longest call at 10-60 seconds depending on validation. The activity log gives the audience something to watch while streaming runs."* |
+| *"Are the suspects fighting each other? Multi-agent debate?"* | *"Not in this build. The suspects are persona-driven — they only respond when the player asks. The party agents (Forensic Analyst, Compliance Officer) are the ones with retrieval-grounded reasoning. A multi-agent debate variant is on my roadmap."* |
+| *"How long did this take to build?"* | *"About three weeks of focused evening work. Most of the time was on the prompts and the scenario data — the Foundry plumbing came together in days."* |
+| *"Will you open-source it?"* | *"It's already on GitHub: github.com/lwhieldon/msft-enterprise-learning-agent."* |
+
+---
+
+## Wrap-Up CTAs (Hosts allocate 3 min)
+
+Have these ready so when hosts ask for closing thoughts you can rattle them off cleanly:
+
+- **GitHub:** `github.com/lwhieldon/msft-enterprise-learning-agent`
+- **Blog post:** `lwhieldon.github.io/2026/06/08/compliance-academy.html`
+- **LinkedIn:** post-stream connect requests welcome — mention you'll be sharing a recap clip
+- **The ask:** *"If you build something on this engine for your own compliance domain, message me on LinkedIn — I want to compare notes."*
 
 ---
 
@@ -159,16 +222,6 @@ Pick scenario from the picker on first load, or click 🆕 **Generate** anytime 
 
 ---
 
-## Closing Reflection (one line, 30 seconds)
-
-Pick one based on what landed best during the demo:
-
-- *"What I'd build next is a Manager Insights dashboard that aggregates readiness across an entire workforce."*
-- *"What surprised me most was how much the role-play framing changed the reasoning quality. Asking 'as the Forensic Analyst, what do you think' produces more useful output than asking 'analyze this evidence' directly."*
-- *"Enterprise compliance training is the most boring AI application nobody's done well yet. There's a real opportunity for whoever cracks the gamification."*
-
----
-
 ## After Going Off-Air
 
 1. Save the activity log (`logs/activity.log`) for the recap blog
@@ -179,9 +232,9 @@ Pick one based on what landed best during the demo:
 
 ---
 
-## Appendix A — Code Walkthrough Quick Reference
+## Appendix A — Code Walkthrough Quick Reference (for Q2)
 
-Keep these three files open in VS Code tabs before going live. During Slot 1's code half, you'll switch share to VS Code and walk through them in order. Pre-position your cursor at the function indicated so Ctrl+G is one keystroke and the audience never sees you scrolling.
+Keep these three files open in VS Code tabs before going live. During Q2 you'll switch share to VS Code and walk through them in order. Pre-position your cursor at the function indicated so Ctrl+G is one keystroke and the audience never sees you scrolling.
 
 | Beat | File | What to land on | What to narrate (one line) |
 |---|---|---|---|
