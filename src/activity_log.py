@@ -67,6 +67,7 @@ _MINT = "\033[38;2;65;239;175m"      # SC&H Mint Green
 _GOLD = "\033[38;2;255;216;51m"      # SC&H Gold
 _CYAN = "\033[38;2;12;197;255m"      # Bright Cyan
 _TEAL = "\033[38;2;0;183;255m"       # Sky Blue (more visible than Dark Teal on black bg)
+_VIOLET = "\033[38;2;179;136;255m"   # Soft violet (used for Auth — infrastructure / identity)
 _GRAY = "\033[38;2;112;112;112m"     # Medium Gray (timestamps + metadata)
 _RED = "\033[38;2;220;60;60m"        # Errors
 
@@ -83,6 +84,7 @@ _CATEGORY_COLORS: dict[str, str] = {
     "Foundry IQ": _MINT,
     "Azure OpenAI": _GOLD,
     "Scenario": _TEAL,
+    "Auth": _BOLD + _VIOLET,
     "Error": _BOLD + _RED,
 }
 
@@ -205,6 +207,40 @@ def log_line(message: str = "") -> None:
             sys.stdout.flush()
     except Exception:
         pass
+
+
+def emit_auth_health(credential_type: str, token_expires_on: int) -> None:
+    """Emit auth health to the activity log.
+
+    Call this after ``warm_up_auth()`` succeeds (on app boot, in
+    ``@cl.on_chat_start``, or any other natural checkpoint). The line
+    that appears in the log tells future-you exactly which credential
+    is active and how long the token is good for. This is the metric
+    that would have warned about the failure mode in the Reactor demo:
+    seeing ``Active credential: AzureCliCredential`` is a sign you are
+    on the fragile path; seeing ``ClientSecretCredential`` means you
+    are on the durable path.
+
+    Args:
+        credential_type: The class name of the credential that resolved.
+            Typically ``ClientSecretCredential`` (Service Principal) or
+            ``AzureCliCredential`` (CLI fallback). Pass the value from
+            ``warm_up_auth()['credential_type']``.
+        token_expires_on: Unix timestamp when the token expires. Pass
+            the value from ``warm_up_auth()['expires_on']``.
+
+    Side effects:
+        Writes one ``[Auth]`` line to the activity log with the
+        credential type and remaining validity in minutes.
+    """
+    now = int(time.time())
+    minutes_left = max(0, (token_expires_on - now) // 60)
+    emit(
+        "Auth",
+        f"Active credential: {credential_type}",
+        token_valid_minutes=minutes_left,
+        expires_on=token_expires_on,
+    )
 
 
 # ---------------------------------------------------------------------------

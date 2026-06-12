@@ -53,11 +53,16 @@ from __future__ import annotations
 import truststore
 truststore.inject_into_ssl()
 
+import os
 from typing import Any
 
 import chainlit as cl
 
 from src.scenario_loader import load_scenario_by_name
+from src.agents._azure_client import (
+    AgentClientError,
+    warm_up_auth,
+)
 from src.agents.forensic_analyst import (
     ForensicAnalystError,
     consult_forensic_analyst,
@@ -76,7 +81,11 @@ from src.agents.scenario_generator import (
     generate_scenario,
 )
 from src.scenario_loader import ScenarioValidationError
-from src.activity_log import emit as _emit, log_line as _log_line
+from src.activity_log import (
+    emit as _emit,
+    emit_auth_health as _emit_auth_health,
+    log_line as _log_line,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -115,6 +124,42 @@ SCENARIO_BLURBS: dict[str, str] = {
     "supplychain": "Vendor compromise: trusted upstream supplier shipped a tampered build.",
     "vishing": "Social engineering: a vishing call against a privileged help-desk account.",
 }
+
+
+# ---------------------------------------------------------------------------
+# Auth pre-flight (runs on chat start)
+# ---------------------------------------------------------------------------
+
+
+def _run_auth_preflight() -> None:
+    """Verify Azure auth works AND emit the resolved credential to the log.
+
+    Two paths are supported:
+      - ``AZURE_OPENAI_API_KEY`` set: the API key fallback will be used by
+        ``build_azure_client``. Skip token acquisition; just emit the path.
+      - Otherwise: call ``warm_up_auth()`` to verify the SDK can actually
+        acquire a token through ``build_credential()``. This catches the
+        failure mode where ``az login`` worked in the shell but the SDK
+        cannot invoke the CLI from inside Python.
+
+    Failures are emitted to the activity log under the ``Error`` category
+    so they are visible to anyone tailing the log. We do NOT raise here
+    because the user should still see Chainlit load and get a graceful
+    error message in chat rather than a blank screen if auth is broken.
+    """
+    api_key = os.environ.get("AZURE_OPENAI_API_KEY", "").strip()
+    if api_key:
+        # API key fallback path. No token to fetch; just note the path.
+        _emit_auth_health("AZURE_OPENAI_API_KEY (fallback)", token_expires_on=0)
+        return
+
+    try:
+        info = warm_up_auth()
+    except AgentClientError as exc:
+        _emit("Error", f"Pre-flight auth check failed: {exc}")
+        return
+
+    _emit_auth_health(info["credential_type"], info["expires_on"])
 
 
 # ---------------------------------------------------------------------------
@@ -278,6 +323,7 @@ async def on_chat_start() -> None:
     """Show the scenario picker, then load and brief the chosen scenario."""
     _log_line("")
     _emit("Chainlit", "New chat session started")
+    _run_auth_preflight()
 
     picker = await cl.AskActionMessage(
         content=(
